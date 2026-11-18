@@ -67,3 +67,15 @@ jobs:
 
       - name: PHPUnit
         run: composer test
+
+  styles:
+    name: SCSS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Тот же dart-sass, что в compose: стадия sass из Dockerfile
+      - name: Сборка стилей
+        run: |
+          docker build --target sass -t blog-sass .
+          docker run --rm -v "$PWD/assets:/app/assets:ro" blog-sass sass --no-source-map --style=compressed assets/scss/app.scss /tmp/app.css
