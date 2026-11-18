@@ -20,6 +20,8 @@ final class PostCard
         public readonly ?string $image,
         public readonly int $views,
         public readonly DateTimeImmutable $publishedAt,
+        // slug основной категории: по нему карточка без обложки выбирает заглушку; null - у статьи нет категорий
+        public readonly ?string $mainCategorySlug,
     ) {
     }
 }

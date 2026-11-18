@@ -15,8 +15,11 @@ use PDO;
 
 final class PostRepository
 {
-    // Колонки для PostCard: в списках текст статьи не нужен
-    private const CARD_COLUMNS = 'p.id, p.slug, p.title, p.description, p.image, p.views, p.published_at';
+    // Колонки для PostCard: в списках текст статьи не нужен. Основная категория - для заглушки вместо обложки:
+    // подзапрос на строку списка идёт по UNIQUE (post_id, position) и первичному ключу категорий
+    private const CARD_COLUMNS = 'p.id, p.slug, p.title, p.description, p.image, p.views, p.published_at,
+        (SELECT mc.slug FROM category_post mcp JOIN categories mc ON mc.id = mcp.category_id
+         WHERE mcp.post_id = p.id ORDER BY mcp.position LIMIT 1) AS main_category';
 
     public function __construct(private readonly PDO $pdo)
     {
@@ -280,6 +283,7 @@ final class PostRepository
             image: $row->nullableString('image'),
             views: $row->int('views'),
             publishedAt: $row->date('published_at'),
+            mainCategorySlug: $row->nullableString('main_category'),
         );
     }
 

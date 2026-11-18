@@ -60,8 +60,22 @@ final class PostRepositoryTest extends DatabaseTestCase
                 image: '/uploads/first.webp',
                 views: 42,
                 publishedAt: new DateTimeImmutable('2026-10-01 10:00:00', new DateTimeZone('UTC')),
+                mainCategorySlug: 'tools',
             )],
         ]], $this->posts->latestByCategory(3));
+    }
+
+    public function testCardKnowsMainCategoryAndMayHaveNoCover(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $agents = $this->insertCategory('agents');
+        $this->insertPost('bare', [$agents, $tools], cover: false);
+
+        $card = $this->posts->inCategory($tools, Sort::Date, 9, 0)[0];
+
+        self::assertNull($card->image);
+        // В списке категории tools основная категория статьи всё равно agents
+        self::assertSame('agents', $card->mainCategorySlug);
     }
 
     public function testLatestByCategoryIsEmptyWithoutPosts(): void

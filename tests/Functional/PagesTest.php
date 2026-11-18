@@ -212,6 +212,30 @@ final class PagesTest extends DatabaseTestCase
         self::assertSame('http://blog.test/og.jpg', $page->schema()['BlogPosting']['image']);
     }
 
+    public function testCardsWithoutCoverShowPlaceholderOfMainCategory(): void
+    {
+        $money = $this->insertCategory('dengi', 'Деньги');
+        $tools = $this->insertCategory('tools', 'Инструменты');
+        $this->insertPost('bare', [$money, $tools], '2026-10-02 10:00:00', cover: false);
+        $this->insertPost('other', [$tools], '2026-10-01 10:00:00');
+        $card = '//article[.//a[@href="/post/bare"]]//img';
+
+        // На главной статья в двух секциях, в категории tools и в похожих у other - везде заглушка основной категории
+        self::assertSame(
+            ['/assets/img/placeholders/dengi.webp', '/assets/img/placeholders/dengi.webp'],
+            $this->page($this->site->get('/'))->attributes($card, 'src'),
+        );
+        $category = $this->page($this->site->get('/category/tools'));
+        self::assertSame(['/assets/img/placeholders/dengi.webp'], $category->attributes($card, 'src'));
+        self::assertSame(['/assets/img/placeholders/dengi.webp'], $this->page($this->site->get('/post/other'))->attributes('//aside' . $card, 'src'));
+        // Заглушка того же размера, что обложка, и без подписи: она только украшает
+        self::assertSame(['768', '512', ''], [
+            $category->attribute($card, 'width'),
+            $category->attribute($card, 'height'),
+            $category->attribute($card, 'alt'),
+        ]);
+    }
+
     public function testPostTextIsEscaped(): void
     {
         $this->insertPost(

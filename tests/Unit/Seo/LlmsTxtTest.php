@@ -62,6 +62,6 @@ final class LlmsTxtTest extends TestCase
 
     private function post(string $slug, string $title, string $description): PostCard
     {
-        return new PostCard(7, $slug, $title, $description, "/uploads/{$slug}.webp", 0, new DateTimeImmutable('2026-10-01 10:00:00'));
+        return new PostCard(7, $slug, $title, $description, "/uploads/{$slug}.webp", 0, new DateTimeImmutable('2026-10-01 10:00:00'), 'tools');
     }
 }

@@ -54,7 +54,7 @@ final class RssFeedTest extends TestCase
 
     private function post(int $id, string $slug, string $title, string $publishedAt): PostCard
     {
-        return new PostCard($id, $slug, $title, "Описание статьи {$slug}.", "/uploads/{$slug}.webp", 0, new DateTimeImmutable($publishedAt));
+        return new PostCard($id, $slug, $title, "Описание статьи {$slug}.", "/uploads/{$slug}.webp", 0, new DateTimeImmutable($publishedAt), 'tools');
     }
 
     private function parse(string $xml): DOMXPath
