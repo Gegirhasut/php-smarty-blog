@@ -6,7 +6,9 @@
 Главная с тремя свежими статьями каждой категории, категория с сортировкой и пагинацией, статья с просмотрами
 и похожими статьями, сидер категорий и статей.
 
-**Демо:** адрес появится после деплоя на Render.
+**Демо:** https://agentura-blog.onrender.com
+
+Бесплатный тариф: если сайт долго не открывали, первый заход занимает до минуты.
 
 ![Главная на десктопе](docs/screenshots/desktop-home.webp)
 
@@ -28,6 +30,8 @@ docker compose up -d --build
 docker compose exec php php bin/seed.php --fresh
 ```
 
+Если первый `up` упал на скачивании пакетов (сеть) - просто повторите команду.
+
 Сайт - http://localhost:8080. Порт и доступ к базе можно поменять в `.env` (образец - `.env.example`).
 
 ## Тесты и анализ
@@ -46,7 +50,7 @@ PHP 8.5 (код совместим с 8.1), Smarty 5, MySQL 8.4, nginx, SCSS (da
 ## Структура
 
 - `public/index.php` - единственная точка входа; `src/Core` - приложение, роутер, запрос и ответ, обёртка над Smarty.
-- `src/Controller` - тонкие контроллеры, `src/Repository` - весь SQL, `src/Blog` - сущности и правила блога без SQL и HTTP.
+- `src/Controller` - тонкие контроллеры, `src/Repository` - весь SQL, `src/Blog` - сущности и правила блога без SQL.
 - `src/Seo` - мета-теги и JSON-LD, sitemap, RSS, llms.txt; `src/Database` и `src/Seed` - подключение, схема, сидер.
 - `templates` - шаблоны Smarty, `assets/scss` - стили, `database` - схема и данные сидера.
 - `tests` - unit, интеграционные и функциональные тесты.
@@ -68,4 +72,4 @@ PHP 8.5 (код совместим с 8.1), Smarty 5, MySQL 8.4, nginx, SCSS (da
 - Бесплатный сервис засыпает после 15 минут без запросов. Первый запрос его будит - это до минуты: Render поднимает
   контейнер, затем около 20 секунд стартуют MySQL и сидер.
 - Локально: `docker build -f docker/demo/Dockerfile -t blog-demo .`,
-  затем `docker run --rm -p 8080:10000 -e APP_URL=http://localhost:8080 blog-demo`.
+  затем `docker run --rm -m 512m -p 18080:10000 -e APP_URL=http://localhost:18080 blog-demo`.
