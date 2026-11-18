@@ -81,6 +81,13 @@
         }
     }
 
+    // С десктопа меню видно всегда: флажок убирается совсем, иначе Tab останавливался бы на невидимом поле
+    &__toggle {
+        @include from(md) {
+            display: none;
+        }
+    }
+
     &__toggle:focus-visible + &__burger {
         outline: 3px solid var(--color-primary);
         outline-offset: 2px;
