@@ -186,6 +186,22 @@ final class PostRepositoryTest extends DatabaseTestCase
         self::assertSame(['agent-and-tool'], array_column($posts[$agents], 'slug'));
     }
 
+    public function testMainCategoryIsTheOneWithLowestPosition(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $agents = $this->insertCategory('agents');
+        $post = $this->insertPost('post', [$agents, $tools]);
+        // Основная категория удалена: позиции оставшихся начинаются не с нуля
+        $this->pdo->prepare('DELETE FROM category_post WHERE post_id = ? AND position = 0')->execute([$post]);
+        $this->insertPost('other', [$agents]);
+
+        $posts = $this->posts->byMainCategory();
+
+        self::assertSame([$tools, $agents], array_keys($posts));
+        self::assertSame(['post'], array_column($posts[$tools], 'slug'));
+        self::assertSame(['other'], array_column($posts[$agents], 'slug'));
+    }
+
     public function testLatestPostsAcrossCategories(): void
     {
         $tools = $this->insertCategory('tools');

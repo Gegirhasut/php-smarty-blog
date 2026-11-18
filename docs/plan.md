@@ -24,7 +24,8 @@
 - `categories` (id, name, slug, description)
 - `posts` (id, title, slug, image, description, content, views, published_at); `published_at` хранится в UTC.
 - `category_post` (category_id, post_id, position) - связь многие-ко-многим, FK с каскадным удалением.
-  `position` - порядок категорий статьи из её файла сидера, 0 - основная: она в хлебных крошках, первой среди меток и в llms.txt.
+  `position` - порядок категорий статьи из её файла сидера, первая по порядку - основная: она в хлебных крошках, первой среди меток
+  и в llms.txt.
 - slug - латиница в нижнем регистре, цифры и дефисы: колонка в ascii, другие строки сидер не пускает, а репозитории не ищут.
 - Схема - `database/schema.sql`, применяется целиком из `bin/seed.php`; изменения - через `--fresh`, данные учебные, миграций нет.
   Индексы: UNIQUE slug, `posts(published_at)` и `posts(views)` под ленты с сортировкой, PK `category_post(category_id, post_id)`

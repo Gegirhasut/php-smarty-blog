@@ -146,6 +146,8 @@ final class PostRepository
 
     /**
      * Все статьи, разложенные по основной категории, в каждой - от новых к старым.
+     * Основная - с наименьшей позицией, как в крошках и метках. Сидер нумерует с нуля, но статья, у которой
+     * нулевую категорию удалили, не должна пропасть из списка; подзапрос идёт по UNIQUE (post_id, position).
      *
      * @return array<int, list<PostCard>> id категории => статьи
      */
@@ -154,7 +156,7 @@ final class PostRepository
         $statement = $this->pdo->prepare(
             'SELECT cp.category_id, ' . self::CARD_COLUMNS . ' FROM category_post cp
              JOIN posts p ON p.id = cp.post_id
-             WHERE cp.position = 0
+             WHERE cp.position = (SELECT MIN(first.position) FROM category_post first WHERE first.post_id = cp.post_id)
              ORDER BY cp.category_id, p.published_at DESC, p.id DESC',
         );
         $statement->execute();
