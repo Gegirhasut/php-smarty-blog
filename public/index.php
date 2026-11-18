@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Core\App;
 use App\Core\Config;
 use App\Core\Request;
+use App\Database\Connection;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
@@ -16,6 +17,7 @@ set_error_handler(function (int $level, string $message, string $file, int $line
     throw new ErrorException($message, 0, $level, $file, $line);
 });
 
-// Если окружение не настроено, исключение из Config::load() PHP запишет в лог, а в проде ответит 500
-$app = new App(Config::load(), dirname(__DIR__));
+// Если окружение не настроено, исключение из Config::load() PHP запишет в лог, а в проде ответит 500.
+// Соединение с БД App откроет сам, когда оно понадобится странице
+$app = new App(Config::load(), dirname(__DIR__), fn (): PDO => Connection::fromEnvironment()->connect());
 $app->handle(Request::fromGlobals())->send();

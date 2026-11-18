@@ -5,15 +5,25 @@ declare(strict_types=1);
 namespace App\Core;
 
 use App\Controller\HomeController;
+use App\Repository\CategoryRepository;
+use Closure;
+use PDO;
 use Throwable;
 
 final class App
 {
     private readonly View $view;
     private readonly Router $router;
+    private ?PDO $pdo = null;
 
-    public function __construct(private readonly Config $config, string $rootDir)
-    {
+    /**
+     * @param Closure(): PDO $connect открывает соединение с БД; вызывается при первом обращении к репозиторию
+     */
+    public function __construct(
+        private readonly Config $config,
+        string $rootDir,
+        private readonly Closure $connect,
+    ) {
         $this->view = new View(
             templateDir: $rootDir . '/templates',
             compileDir: $rootDir . '/var/templates_c',
@@ -21,10 +31,10 @@ final class App
         );
         $this->view->share('site', ['name' => $config->siteName, 'url' => $config->siteUrl]);
 
-        // Контроллер создаётся только для совпавшего маршрута, поэтому на 404 и 405
-        // его зависимости, вроде соединения с БД, не поднимаются
+        // Контроллер и его репозитории создаются только для совпавшего маршрута,
+        // поэтому на 404 и 405 соединение с БД не открывается
         $this->router = new Router();
-        $this->router->add('/', fn (): Response => (new HomeController($this->view))->index());
+        $this->router->add('/', fn (): Response => (new HomeController($this->view, $this->categories()))->index());
     }
 
     public function handle(Request $request): Response
@@ -57,5 +67,15 @@ final class App
 
             return new Response($html, 404);
         }
+    }
+
+    private function categories(): CategoryRepository
+    {
+        return new CategoryRepository($this->pdo());
+    }
+
+    private function pdo(): PDO
+    {
+        return $this->pdo ??= ($this->connect)();
     }
 }

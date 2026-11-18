@@ -16,7 +16,7 @@ final class Config
     public static function load(): self
     {
         return new self(
-            siteName: 'Блог',
+            siteName: 'Агентура',
             siteUrl: rtrim(Env::get('APP_URL'), '/'),
             debug: Env::get('APP_ENV', 'prod') === 'dev',
         );

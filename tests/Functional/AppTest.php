@@ -4,58 +4,65 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use App\Core\App;
-use App\Core\Config;
-use App\Core\Request;
-use App\Core\Response;
-use App\Tests\TempDir;
+use PDO;
+use PDOException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Ответы, которым база не нужна: соединение с ней не должно даже открываться.
+ */
 final class AppTest extends TestCase
 {
-    private TempDir $root;
-    private string $previousErrorLog;
+    private Site $site;
 
     protected function setUp(): void
     {
-        // Отдельный корень, чтобы тесты не делили скомпилированные шаблоны с запущенным сайтом
-        $this->root = new TempDir();
-        $this->root->copy(dirname(__DIR__, 2) . '/templates', 'templates');
-        $this->previousErrorLog = (string) ini_set('error_log', $this->root->path . '/error.log');
+        $this->site = new Site(fn (): PDO => self::fail('Соединение с базой открывать не нужно'));
     }
 
     protected function tearDown(): void
     {
-        ini_set('error_log', $this->previousErrorLog);
-        $this->root->remove();
+        $this->site->remove();
     }
 
-    public function testHomePage(): void
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function unknownPaths(): array
     {
-        $response = $this->handle('GET', '/');
-
-        self::assertSame(200, $response->status);
-        self::assertStringContainsString('<h1>Блог</h1>', $response->body);
-        self::assertStringContainsString('rel="canonical"', $response->body);
+        return [
+            'страница' => ['/missing'],
+            'статика' => ['/uploads/missing.webp'],
+            'точка входа' => ['/index.php'],
+        ];
     }
 
-    public function testHeadIsHandledLikeGet(): void
+    #[DataProvider('unknownPaths')]
+    public function testUnknownPageGets404WithoutCanonical(string $path): void
     {
-        self::assertSame(200, $this->handle('HEAD', '/')->status);
-    }
-
-    public function testUnknownPageGets404WithoutCanonical(): void
-    {
-        $response = $this->handle('GET', '/missing');
+        $response = $this->site->get($path);
 
         self::assertSame(404, $response->status);
         self::assertStringContainsString('<h1>Страница не найдена</h1>', $response->body);
         self::assertStringNotContainsString('rel="canonical"', $response->body);
     }
 
-    public function testOtherMethodsGet405(): void
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function routes(): array
     {
-        $response = $this->handle('POST', '/');
+        return [
+            'главная' => ['/'],
+            'неизвестная страница' => ['/missing'],
+        ];
+    }
+
+    #[DataProvider('routes')]
+    public function testOtherMethodsGet405(string $path): void
+    {
+        $response = $this->site->request('POST', $path);
 
         self::assertSame(405, $response->status);
         self::assertSame('GET, HEAD', $response->headers['Allow']);
@@ -64,46 +71,42 @@ final class AppTest extends TestCase
 
     public function testBrokenNotFoundPageBecomesServerError(): void
     {
-        unlink($this->root->path . '/templates/errors/404.tpl');
+        unlink($this->site->root->path . '/templates/errors/404.tpl');
 
-        $response = $this->handle('GET', '/missing');
+        $response = $this->site->get('/missing');
 
         self::assertSame(500, $response->status);
         self::assertStringContainsString('<h1>Что-то пошло не так</h1>', $response->body);
-        self::assertStringContainsString('404.tpl', $this->loggedErrors());
+        self::assertStringContainsString('404.tpl', $this->site->errorLog());
     }
 
     public function testServerErrorHidesDetailsInProduction(): void
     {
-        unlink($this->root->path . '/templates/home.tpl');
+        $site = new Site(fn (): PDO => throw new PDOException('Connection refused'));
 
-        $response = $this->handle('GET', '/');
+        try {
+            $response = $site->get('/');
 
-        self::assertSame(500, $response->status);
-        self::assertStringContainsString('<h1>Что-то пошло не так</h1>', $response->body);
-        self::assertStringNotContainsString('home.tpl', $response->body);
-        self::assertStringContainsString('home.tpl', $this->loggedErrors());
+            self::assertSame(500, $response->status);
+            self::assertStringContainsString('<h1>Что-то пошло не так</h1>', $response->body);
+            self::assertStringNotContainsString('Connection refused', $response->body);
+            self::assertStringContainsString('Connection refused', $site->errorLog());
+        } finally {
+            $site->remove();
+        }
     }
 
     public function testServerErrorShowsDetailsInDevelopment(): void
     {
-        unlink($this->root->path . '/templates/home.tpl');
+        $site = new Site(fn (): PDO => throw new PDOException('Connection refused'), debug: true);
 
-        $response = $this->handle('GET', '/', debug: true);
+        try {
+            $response = $site->get('/');
 
-        self::assertSame(500, $response->status);
-        self::assertStringContainsString('home.tpl', $response->body);
-    }
-
-    private function handle(string $method, string $path, bool $debug = false): Response
-    {
-        $config = new Config(siteName: 'Блог', siteUrl: 'http://blog.test', debug: $debug);
-
-        return (new App($config, $this->root->path))->handle(new Request($method, $path));
-    }
-
-    private function loggedErrors(): string
-    {
-        return (string) file_get_contents($this->root->path . '/error.log');
+            self::assertSame(500, $response->status);
+            self::assertStringContainsString('Connection refused', $response->body);
+        } finally {
+            $site->remove();
+        }
     }
 }

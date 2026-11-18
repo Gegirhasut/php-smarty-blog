@@ -31,6 +31,18 @@
 <body>
     <header class="header">
         <a class="header__logo" href="/">{$site.name}</a>
+        {* Меню строится из базы, поэтому его нет на странице 404: там соединение не открывается *}
+        {if $categories}
+            <nav class="header__nav nav" aria-label="Категории">
+                <ul class="nav__list">
+                    {foreach $categories as $item}
+                        <li class="nav__item">
+                            <a class="nav__link" href="/category/{$item.slug}"{if $item.slug === $currentCategory} aria-current="page"{/if}>{$item.name}</a>
+                        </li>
+                    {/foreach}
+                </ul>
+            </nav>
+        {/if}
     </header>
 
     <main class="main">
@@ -38,7 +50,9 @@
     </main>
 
     <footer class="footer">
-        <p>© {$smarty.now|date_format:'Y'} {$site.name}</p>
+        <a class="footer__logo" href="/">{$site.name}</a>
+        <p class="footer__text">Блог об ИИ: модели и инструменты, агенты, исследования, деньги и люди.</p>
+        <p class="footer__copyright">© {$smarty.now|date_format:'Y'} {$site.name}</p>
     </footer>
 </body>
 </html>

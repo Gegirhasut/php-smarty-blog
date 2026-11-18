@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Database;
 
-use App\Tests\Integration\DatabaseTestCase;
+use App\Tests\DatabaseTestCase;
 use PDO;
 use PDOException;
 

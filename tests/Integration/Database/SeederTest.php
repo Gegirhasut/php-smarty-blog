@@ -7,7 +7,7 @@ namespace App\Tests\Integration\Database;
 use App\Database\Seeder;
 use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
-use App\Tests\Integration\DatabaseTestCase;
+use App\Tests\DatabaseTestCase;
 use App\Tests\TempDir;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;

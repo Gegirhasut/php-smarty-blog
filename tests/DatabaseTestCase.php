@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Integration;
+namespace App\Tests;
 
 use App\Core\Env;
 use App\Database\Connection;
@@ -11,6 +11,9 @@ use PDO;
 use PDOStatement;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * Тесты на настоящем MySQL в отдельной базе blog_test.
+ */
 abstract class DatabaseTestCase extends TestCase
 {
     // Сначала таблица связей: её внешние ключи ссылаются на остальные
@@ -56,6 +59,45 @@ abstract class DatabaseTestCase extends TestCase
         self::assertSame($expected, $this->select("SELECT COUNT(*) FROM {$table}")->fetchColumn());
     }
 
+    protected function insertCategory(string $slug, string $name = '', string $description = ''): int
+    {
+        $this->pdo->prepare('INSERT INTO categories (slug, name, description) VALUES (?, ?, ?)')
+            ->execute([$slug, $name ?: "Категория {$slug}", $description ?: "Описание категории {$slug}."]);
+
+        return (int) $this->pdo->lastInsertId();
+    }
+
+    /**
+     * @param list<int> $categoryIds
+     */
+    protected function insertPost(
+        string $slug,
+        array $categoryIds,
+        string $publishedAt = '2026-10-01 10:00:00',
+        int $views = 0,
+        string $title = '',
+        string $content = 'Текст статьи.',
+    ): int {
+        $this->pdo->prepare(
+            'INSERT INTO posts (title, slug, image, description, content, views, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        )->execute([
+            $title ?: "Статья {$slug}",
+            $slug,
+            "/uploads/{$slug}.webp",
+            "Описание статьи {$slug}.",
+            $content,
+            $views,
+            $publishedAt,
+        ]);
+        $postId = (int) $this->pdo->lastInsertId();
+
+        foreach ($categoryIds as $categoryId) {
+            $this->pdo->prepare('INSERT INTO category_post (category_id, post_id) VALUES (?, ?)')->execute([$categoryId, $postId]);
+        }
+
+        return $postId;
+    }
+
     private static function connect(): PDO
     {
         return Connection::fromEnvironment(Env::get('DB_TEST_NAME', 'blog_test'))->connect();
@@ -63,6 +105,6 @@ abstract class DatabaseTestCase extends TestCase
 
     private static function schema(PDO $pdo): Schema
     {
-        return new Schema($pdo, dirname(__DIR__, 2) . '/database/schema.sql');
+        return new Schema($pdo, dirname(__DIR__) . '/database/schema.sql');
     }
 }

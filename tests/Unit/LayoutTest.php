@@ -6,10 +6,8 @@ namespace App\Tests\Unit;
 
 use App\Core\Meta;
 use App\Core\View;
+use App\Tests\Html;
 use App\Tests\TempDir;
-use DOMDocument;
-use DOMElement;
-use DOMXPath;
 use PHPUnit\Framework\TestCase;
 
 final class LayoutTest extends TestCase
@@ -42,18 +40,18 @@ final class LayoutTest extends TestCase
         ));
         $url = 'https://blog.test/category/travel?page=2&sort=date';
 
-        self::assertSame('Статья "с кавычками" <и тегом> — Блог', $this->text($page, '//title'));
-        self::assertSame('Описание & детали', $this->attribute($page, '//meta[@name="description"]', 'content'));
-        self::assertSame($url, $this->attribute($page, '//link[@rel="canonical"]', 'href'));
-        self::assertSame($url, $this->attribute($page, '//meta[@property="og:url"]', 'content'));
-        self::assertSame('article', $this->attribute($page, '//meta[@property="og:type"]', 'content'));
-        self::assertSame('Статья "с кавычками" <и тегом>', $this->attribute($page, '//meta[@property="og:title"]', 'content'));
-        self::assertSame('https://blog.test/uploads/cover.webp', $this->attribute($page, '//meta[@property="og:image"]', 'content'));
-        self::assertSame('summary_large_image', $this->attribute($page, '//meta[@name="twitter:card"]', 'content'));
-        self::assertSame(1, $this->countNodes($page, '//script'));
+        self::assertSame('Статья "с кавычками" <и тегом> — Блог', $page->text('//title'));
+        self::assertSame('Описание & детали', $page->attribute('//meta[@name="description"]', 'content'));
+        self::assertSame($url, $page->attribute('//link[@rel="canonical"]', 'href'));
+        self::assertSame($url, $page->attribute('//meta[@property="og:url"]', 'content'));
+        self::assertSame('article', $page->attribute('//meta[@property="og:type"]', 'content'));
+        self::assertSame('Статья "с кавычками" <и тегом>', $page->attribute('//meta[@property="og:title"]', 'content'));
+        self::assertSame('https://blog.test/uploads/cover.webp', $page->attribute('//meta[@property="og:image"]', 'content'));
+        self::assertSame('summary_large_image', $page->attribute('//meta[@name="twitter:card"]', 'content'));
+        self::assertSame(1, $page->count('//script'));
         self::assertSame(
             ['@context' => 'https://schema.org', '@graph' => $schema],
-            json_decode($this->text($page, '//script[@type="application/ld+json"]'), true),
+            json_decode($page->text('//script[@type="application/ld+json"]'), true),
         );
     }
 
@@ -61,9 +59,8 @@ final class LayoutTest extends TestCase
     {
         $page = $this->render(new Meta(title: 'Страница не найдена'));
 
-        self::assertSame('Страница не найдена — Блог', $this->text($page, '//title'));
-        self::assertSame(0, $this->countNodes(
-            $page,
+        self::assertSame('Страница не найдена — Блог', $page->text('//title'));
+        self::assertSame(0, $page->count(
             '//link[@rel="canonical"] | //meta[@property] | //meta[starts-with(@name, "twitter:")] | //script',
         ));
     }
@@ -72,52 +69,44 @@ final class LayoutTest extends TestCase
     {
         $page = $this->render(new Meta(canonical: '/'));
 
-        self::assertSame('Блог', $this->text($page, '//title'));
-        self::assertSame('Блог', $this->attribute($page, '//meta[@property="og:title"]', 'content'));
-        self::assertSame('summary', $this->attribute($page, '//meta[@name="twitter:card"]', 'content'));
-        self::assertSame(0, $this->countNodes($page, '//meta[@property="og:image"]'));
+        self::assertSame('Блог', $page->text('//title'));
+        self::assertSame('Блог', $page->attribute('//meta[@property="og:title"]', 'content'));
+        self::assertSame('summary', $page->attribute('//meta[@name="twitter:card"]', 'content'));
+        self::assertSame(0, $page->count('//meta[@property="og:image"]'));
     }
 
     public function testRendersPageContentInsideMain(): void
     {
-        self::assertSame('Страница', $this->text($this->render(new Meta()), '//main/h1'));
+        self::assertSame('Страница', $this->render(new Meta())->text('//main/h1'));
     }
 
-    private function render(Meta $meta): DOMXPath
+    public function testMarksCurrentCategoryInMenu(): void
     {
-        $html = $this->view->render(
+        $page = $this->render(new Meta(), [
+            'categories' => [
+                ['id' => 1, 'slug' => 'tools', 'name' => 'Инструменты'],
+                ['id' => 2, 'slug' => 'agents', 'name' => 'Агенты'],
+            ],
+            'currentCategory' => 'agents',
+        ]);
+
+        self::assertSame(['/category/tools', '/category/agents'], $page->attributes('//nav//a', 'href'));
+        self::assertSame(['Агенты'], $page->texts('//nav//a[@aria-current="page"]'));
+    }
+
+    public function testMenuIsHiddenWithoutCategories(): void
+    {
+        self::assertSame(0, $this->render(new Meta())->count('//nav'));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function render(Meta $meta, array $data = []): Html
+    {
+        return new Html($this->view->render(
             'string:{extends "layout.tpl"}{block "content"}<h1>Страница</h1>{/block}',
-            ['meta' => $meta],
-        );
-        $document = new DOMDocument();
-        $document->loadHTML($html, LIBXML_NOERROR);
-
-        return new DOMXPath($document);
-    }
-
-    private function countNodes(DOMXPath $page, string $query): int
-    {
-        $nodes = $page->query($query);
-
-        return $nodes === false ? 0 : $nodes->length;
-    }
-
-    private function text(DOMXPath $page, string $query): string
-    {
-        return $this->element($page, $query)->textContent;
-    }
-
-    private function attribute(DOMXPath $page, string $query, string $name): string
-    {
-        return $this->element($page, $query)->getAttribute($name);
-    }
-
-    private function element(DOMXPath $page, string $query): DOMElement
-    {
-        $nodes = $page->query($query);
-        $node = $nodes === false ? null : $nodes->item(0);
-        self::assertInstanceOf(DOMElement::class, $node, "Не найдено: {$query}");
-
-        return $node;
+            ['meta' => $meta] + $data,
+        ));
     }
 }

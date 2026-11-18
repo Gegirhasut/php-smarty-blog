@@ -6,10 +6,32 @@ namespace App\Repository;
 
 use PDO;
 
+/**
+ * @phpstan-type CategoryLink array{id: int, slug: string, name: string}
+ */
 final class CategoryRepository
 {
     public function __construct(private readonly PDO $pdo)
     {
+    }
+
+    /**
+     * Категории, в которых есть статьи, для меню. Порядок задаёт categories.php: сидер вставляет категории
+     * по порядку, поэтому сортировка по id. Пустые категории не показываем, как и на главной.
+     *
+     * @return list<CategoryLink>
+     */
+    public function withPosts(): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT c.id, c.slug, c.name FROM categories c
+             WHERE EXISTS (SELECT 1 FROM category_post cp WHERE cp.category_id = c.id)
+             ORDER BY c.id',
+        );
+        $statement->execute();
+
+        /** @var list<CategoryLink> */
+        return $statement->fetchAll();
     }
 
     public function count(): int
