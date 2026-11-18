@@ -19,6 +19,21 @@ final class TempDir
         mkdir($this->path);
     }
 
+    public function copy(string $sourceDir, string $targetDir): void
+    {
+        /** @var iterable<SplFileInfo> $files */
+        $files = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($sourceDir, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST,
+        );
+
+        mkdir($this->path . '/' . $targetDir);
+        foreach ($files as $file) {
+            $target = $this->path . '/' . $targetDir . substr($file->getPathname(), strlen($sourceDir));
+            $file->isDir() ? mkdir($target) : copy($file->getPathname(), $target);
+        }
+    }
+
     public function remove(): void
     {
         /** @var iterable<SplFileInfo> $files */
