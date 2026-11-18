@@ -41,7 +41,9 @@ final class ConfigTest extends TestCase
         self::assertSame('https://blog.example.com', $config->siteUrl);
         self::assertSame('Агентура', $config->siteName);
         self::assertNotSame('', $config->siteDescription);
-        self::assertSame('/og.png', $config->siteImage);
+        self::assertSame('/og.jpg', $config->siteImage);
+        // Картинка для соцсетей существует и нужного им размера
+        self::assertSame([1200, 630], array_slice(getimagesize(dirname(__DIR__, 3) . '/public' . $config->siteImage) ?: [], 0, 2));
     }
 
     public function testProductionModeByDefault(): void

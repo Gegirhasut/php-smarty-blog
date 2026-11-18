@@ -56,7 +56,7 @@ final class Site
             siteName: 'Агентура',
             siteDescription: 'Блог об ИИ.',
             siteUrl: 'http://blog.test',
-            siteImage: '/og.png',
+            siteImage: '/og.jpg',
             debug: $this->debug,
         );
 

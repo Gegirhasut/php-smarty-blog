@@ -22,7 +22,7 @@ final class PageMetaTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->meta = new PageMeta(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', '/og.png', debug: false), new Urls('https://blog.test'));
+        $this->meta = new PageMeta(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', '/og.jpg', debug: false), new Urls('https://blog.test'));
         $this->category = new Category(1, 'tools', 'Инструменты', 'Обзоры сервисов.');
     }
 
@@ -31,7 +31,7 @@ final class PageMetaTest extends TestCase
         $meta = $this->meta->home();
 
         self::assertSame('/', $meta->canonical);
-        self::assertSame('/og.png', $meta->image);
+        self::assertSame('/og.jpg', $meta->image);
         self::assertNull($meta->robots);
         self::assertSame([], $meta->breadcrumbs);
         self::assertSame([[
@@ -51,7 +51,7 @@ final class PageMetaTest extends TestCase
         self::assertSame('Обзоры сервисов.', $meta->description);
         self::assertSame('/category/tools', $meta->canonical);
         self::assertNull($meta->robots);
-        self::assertSame('/og.png', $meta->image);
+        self::assertSame('/og.jpg', $meta->image);
         self::assertSame(
             [['name' => 'Главная', 'url' => '/'], ['name' => 'Инструменты', 'url' => '/category/tools']],
             $meta->breadcrumbs,

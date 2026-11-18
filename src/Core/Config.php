@@ -22,7 +22,7 @@ final class Config
             siteName: 'Агентура',
             siteDescription: 'Блог об ИИ: новые модели и инструменты, агенты, исследования, деньги и люди.',
             siteUrl: rtrim(Env::get('APP_URL'), '/'),
-            siteImage: '/og.png',
+            siteImage: '/og.jpg',
             debug: Env::get('APP_ENV', 'prod') === 'dev',
         );
     }

@@ -32,6 +32,10 @@
     <link rel="preload" href="/assets/fonts/manrope-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/assets/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="{'/assets/css/app.css'|asset}">
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#3b2bd9">
     <link rel="alternate" type="application/rss+xml" title="{$site.name}" href="{$urls->feed()}">
     {if $meta->schema}
         <script type="application/ld+json">{$meta->jsonLd() nofilter}</script>

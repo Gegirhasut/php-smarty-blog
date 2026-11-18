@@ -107,6 +107,17 @@ final class LayoutTest extends TestCase
         );
     }
 
+    public function testLinkedFilesExist(): void
+    {
+        $page = $this->render(new Meta());
+        $files = $page->attributes('//link[@rel="icon" or @rel="apple-touch-icon" or @rel="manifest" or @rel="preload"]', 'href');
+
+        self::assertCount(5, $files);
+        foreach ($files as $file) {
+            self::assertFileExists(dirname(__DIR__, 2) . '/public' . $file);
+        }
+    }
+
     public function testMenuIsHiddenWithoutCategories(): void
     {
         self::assertSame(0, $this->render(new Meta())->count('//nav'));
