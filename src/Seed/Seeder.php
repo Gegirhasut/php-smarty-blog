@@ -14,7 +14,8 @@ use Throwable;
 final class Seeder
 {
     private const CATEGORY_KEYS = ['slug', 'name', 'description'];
-    private const POST_KEYS = ['title', 'image', 'description', 'categories', 'published_at', 'views', 'content'];
+    // Обложка (image) необязательна, остальные поля - да
+    private const POST_KEYS = ['title', 'description', 'categories', 'published_at', 'views', 'content'];
 
     public function __construct(
         private readonly PDO $pdo,
@@ -46,7 +47,7 @@ final class Seeder
             $this->posts->insertMany(array_map(fn (array $post): array => [
                 'title' => $post['title'],
                 'slug' => $post['slug'],
-                'image' => "/uploads/{$post['image']}",
+                'image' => isset($post['image']) ? "/uploads/{$post['image']}" : null,
                 'description' => $post['description'],
                 'content' => $post['content'],
                 'views' => $post['views'],
@@ -95,7 +96,7 @@ final class Seeder
      * @return list<array{
      *     slug: string,
      *     title: string,
-     *     image: string,
+     *     image?: string,
      *     description: string,
      *     categories: list<string>,
      *     published_at: string,
@@ -107,7 +108,7 @@ final class Seeder
     {
         $posts = [];
         foreach (glob($this->seedsDir . '/posts/*.php') ?: [] as $file) {
-            /** @var array{title: string, image: string, description: string, categories: list<string>, published_at: string, views: int, content: string} $post */
+            /** @var array{title: string, image?: string, description: string, categories: list<string>, published_at: string, views: int, content: string} $post */
             $post = require $file;
             $this->requireKeys($post, self::POST_KEYS, $file);
             if ($post['categories'] === []) {

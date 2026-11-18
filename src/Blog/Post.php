@@ -16,7 +16,8 @@ final class Post
         public readonly string $slug,
         public readonly string $title,
         public readonly string $description,
-        public readonly string $image,
+        // Путь к обложке; null - статья без обложки
+        public readonly ?string $image,
         public readonly int $views,
         public readonly DateTimeImmutable $publishedAt,
         public readonly string $content,

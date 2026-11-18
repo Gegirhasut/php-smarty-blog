@@ -200,6 +200,18 @@ final class PagesTest extends DatabaseTestCase
         self::assertSame(['BlogPosting', 'BreadcrumbList'], array_keys($page->schema()));
     }
 
+    public function testPostWithoutCover(): void
+    {
+        $this->insertPost('bare', [$this->insertCategory('tools')], cover: false);
+
+        $page = $this->page($this->site->get('/post/bare'));
+
+        // Блока обложки нет, а соцсетям и JSON-LD достаётся картинка сайта
+        self::assertSame(0, $page->count(self::POST . '//img'));
+        self::assertSame('http://blog.test/og.jpg', $page->attribute('//meta[@property="og:image"]', 'content'));
+        self::assertSame('http://blog.test/og.jpg', $page->schema()['BlogPosting']['image']);
+    }
+
     public function testPostTextIsEscaped(): void
     {
         $this->insertPost(

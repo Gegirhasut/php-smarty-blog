@@ -21,6 +21,20 @@ final class RowTest extends DatabaseTestCase
         self::assertSame('2026-10-09T16:33:00+00:00', $row->date('published_at')->format(DATE_ATOM));
     }
 
+    public function testReadsNullableString(): void
+    {
+        $row = Row::first($this->select("SELECT NULL AS image, 'cover.webp' AS cover, 1 AS n"));
+        self::assertNotNull($row);
+
+        self::assertNull($row->nullableString('image'));
+        self::assertSame('cover.webp', $row->nullableString('cover'));
+
+        $this->expectException(UnexpectedValueException::class);
+        $this->expectExceptionMessage('Колонка n: ожидался string или null, получен int');
+
+        $row->nullableString('n');
+    }
+
     public function testReadsAllRows(): void
     {
         $rows = Row::all($this->select('SELECT 1 AS n UNION ALL SELECT 2'));

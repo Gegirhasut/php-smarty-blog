@@ -76,6 +76,8 @@ final class PageMeta
             $breadcrumbs[] = ['name' => $categories[0]->name, 'url' => $this->urls->category($categories[0]->slug)];
         }
         $breadcrumbs[] = ['name' => $post->title, 'url' => $url];
+        // У статьи без обложки в соцсетях и JSON-LD - картинка сайта
+        $image = $post->image ?? $this->config->siteImage;
         // Авторов в блоге нет, статьи выпускает сам блог
         $publisher = [
             '@type' => 'Organization',
@@ -88,14 +90,14 @@ final class PageMeta
             description: $post->description,
             canonical: $url,
             ogType: 'article',
-            image: $post->image,
+            image: $image,
             breadcrumbs: $breadcrumbs,
             schema: [
                 [
                     '@type' => 'BlogPosting',
                     'headline' => $post->title,
                     'description' => $post->description,
-                    'image' => $this->urls->absolute($post->image),
+                    'image' => $this->urls->absolute($image),
                     'datePublished' => $post->publishedAt->format(DATE_ATOM),
                     'url' => $this->urls->absolute($url),
                     'mainEntityOfPage' => $this->urls->absolute($url),

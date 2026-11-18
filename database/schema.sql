@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS posts (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
     title VARCHAR(200) NOT NULL,
     slug VARCHAR(200) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-    image VARCHAR(255) NOT NULL,
+    -- Обложка необязательна: без неё карточка показывает заглушку категории, а соцсети - картинку сайта
+    image VARCHAR(255) NULL,
     description VARCHAR(500) NOT NULL,
     content MEDIUMTEXT NOT NULL,
     views INT UNSIGNED NOT NULL DEFAULT 0,

@@ -110,13 +110,14 @@ abstract class DatabaseTestCase extends TestCase
         int $views = 0,
         string $title = '',
         string $content = 'Текст статьи.',
+        bool $cover = true,
     ): int {
         $this->pdo->prepare(
             'INSERT INTO posts (title, slug, image, description, content, views, published_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
         )->execute([
             $title ?: "Статья {$slug}",
             $slug,
-            "/uploads/{$slug}.webp",
+            $cover ? "/uploads/{$slug}.webp" : null,
             "Описание статьи {$slug}.",
             $content,
             $views,

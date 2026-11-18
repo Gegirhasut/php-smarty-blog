@@ -56,6 +56,13 @@ final class Row
         return is_string($value) ? $value : throw $this->typeError($column, 'string', $value);
     }
 
+    public function nullableString(string $column): ?string
+    {
+        $value = $this->value($column);
+
+        return $value === null || is_string($value) ? $value : throw $this->typeError($column, 'string или null', $value);
+    }
+
     /**
      * DATETIME из базы, где время хранится в UTC.
      */

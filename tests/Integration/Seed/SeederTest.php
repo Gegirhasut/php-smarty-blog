@@ -179,8 +179,8 @@ final class SeederTest extends DatabaseTestCase
     {
         $fields = "'title' => 'Статья', 'description' => '', 'published_at' => '2026-10-01 10:00:00', 'views' => 1, 'content' => ''";
 
-        yield 'не массив' => ["<?php return 'Статья';", 'нет полей: title, image'];
-        yield 'без обложки' => ["<?php return [{$fields}, 'categories' => ['travel']];", 'нет полей: image'];
+        yield 'не массив' => ["<?php return 'Статья';", 'нет полей: title, description'];
+        yield 'без даты' => ["<?php return ['title' => 'Статья', 'description' => '', 'categories' => ['travel'], 'views' => 1, 'content' => ''];", 'нет полей: published_at'];
         yield 'без категорий' => ["<?php return [{$fields}, 'categories' => [], 'image' => 'travel-1.webp'];", 'пустой список категорий'];
     }
 
@@ -202,6 +202,26 @@ final class SeederTest extends DatabaseTestCase
         }
 
         $this->assertRowCount(0, 'posts');
+    }
+
+    public function testPostWithoutCover(): void
+    {
+        $seeds = new TempDir();
+        $seeds->copy(self::FIXTURES, 'seeds');
+        file_put_contents(
+            $seeds->path . '/seeds/posts/bare.php',
+            "<?php return ['title' => 'Без обложки', 'description' => '', 'categories' => ['travel'],"
+            . " 'published_at' => '2026-10-01 10:00:00', 'views' => 1, 'content' => ''];",
+        );
+
+        try {
+            $this->seeder($seeds->path . '/seeds')->run();
+        } finally {
+            $seeds->remove();
+        }
+
+        self::assertNull($this->select("SELECT image FROM posts WHERE slug = 'bare'")->fetchColumn());
+        self::assertSame('/uploads/travel-1.webp', $this->select("SELECT image FROM posts WHERE slug = 'baikal'")->fetchColumn());
     }
 
     public function testRollsBackEverythingOnUnknownCategory(): void

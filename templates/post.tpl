@@ -15,7 +15,9 @@
                 <p class="post__lead">{$post->description}</p>
             </header>
 
-            {include "partials/cover.tpl" class="post__image" src=$post->image alt=$post->title priority=true}
+            {if $post->image}
+                {include "partials/cover.tpl" class="post__image" src=$post->image alt=$post->title priority=true}
+            {/if}
 
             {* Блоки из ArticleText: текст выводится с обычным экранированием, без сырого HTML *}
             <div class="post__content">

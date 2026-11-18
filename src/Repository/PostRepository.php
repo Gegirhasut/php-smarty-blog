@@ -223,7 +223,7 @@ final class PostRepository
      * @param list<array{
      *     title: string,
      *     slug: string,
-     *     image: string,
+     *     image: ?string,
      *     description: string,
      *     content: string,
      *     views: int,
@@ -277,7 +277,7 @@ final class PostRepository
             slug: $row->string('slug'),
             title: $row->string('title'),
             description: $row->string('description'),
-            image: $row->string('image'),
+            image: $row->nullableString('image'),
             views: $row->int('views'),
             publishedAt: $row->date('published_at'),
         );
@@ -290,7 +290,7 @@ final class PostRepository
             slug: $row->string('slug'),
             title: $row->string('title'),
             description: $row->string('description'),
-            image: $row->string('image'),
+            image: $row->nullableString('image'),
             views: $row->int('views'),
             publishedAt: $row->date('published_at'),
             content: $row->string('content'),

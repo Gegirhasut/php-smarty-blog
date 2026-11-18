@@ -89,6 +89,25 @@ final class PageMetaTest extends TestCase
         self::assertSame('/category/tools?sort=views&page=2', $meta->canonical);
     }
 
+    public function testPostWithoutCoverUsesSiteImage(): void
+    {
+        $post = new Post(
+            id: 7,
+            slug: 'first',
+            title: 'Первая статья',
+            description: 'О чём статья.',
+            image: null,
+            views: 10,
+            publishedAt: new DateTimeImmutable('2026-10-09 16:33:00'),
+            content: 'Текст.',
+        );
+
+        $meta = $this->meta->post($post, [$this->category]);
+
+        self::assertSame('/og.jpg', $meta->image);
+        self::assertSame('https://blog.test/og.jpg', $this->node($meta, 'BlogPosting')['image']);
+    }
+
     public function testPost(): void
     {
         $post = new Post(
