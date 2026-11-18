@@ -125,6 +125,7 @@ final class PostRepositoryTest extends DatabaseTestCase
         ], $this->posts->findBySlug('first'));
         self::assertNull($this->posts->findBySlug('First'));
         self::assertNull($this->posts->findBySlug('missing'));
+        self::assertNull($this->posts->findBySlug('привет'));
     }
 
     public function testIncrementsViewsOfOnePost(): void

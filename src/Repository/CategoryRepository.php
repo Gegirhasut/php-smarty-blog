@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Blog\Slug;
 use PDO;
 
 /**
@@ -40,6 +41,11 @@ final class CategoryRepository
      */
     public function findBySlug(string $slug): ?array
     {
+        // Строка не в формате slug не может быть в базе, а запрос с ней MySQL отклонил бы с ошибкой
+        if (!Slug::isValid($slug)) {
+            return null;
+        }
+
         $statement = $this->pdo->prepare('SELECT id, slug, name, description FROM categories WHERE slug = ?');
         $statement->execute([$slug]);
 

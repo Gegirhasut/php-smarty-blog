@@ -116,6 +116,45 @@ final class SeederTest extends DatabaseTestCase
         }
     }
 
+    public function testRejectsCategorySlugUnfitForAddress(): void
+    {
+        $seeds = new TempDir();
+        $seeds->copy(self::FIXTURES, 'seeds');
+        file_put_contents(
+            $seeds->path . '/seeds/categories.php',
+            "<?php return [['slug' => 'Путешествия', 'name' => 'Путешествия', 'description' => '']];",
+        );
+
+        try {
+            $this->seeder($seeds->path . '/seeds')->run();
+            self::fail('Сидер должен был остановиться на slug с кириллицей');
+        } catch (RuntimeException $e) {
+            self::assertStringContainsString('categories.php slug «Путешествия» не подходит для адреса', $e->getMessage());
+        } finally {
+            $seeds->remove();
+        }
+
+        $this->assertRowCount(0, 'categories');
+    }
+
+    public function testRejectsPostFileNameUnfitForAddress(): void
+    {
+        $seeds = new TempDir();
+        $seeds->copy(self::FIXTURES, 'seeds');
+        rename($seeds->path . '/seeds/posts/pasta.php', $seeds->path . '/seeds/posts/Pasta.php');
+
+        try {
+            $this->seeder($seeds->path . '/seeds')->run();
+            self::fail('Сидер должен был остановиться на slug в верхнем регистре');
+        } catch (RuntimeException $e) {
+            self::assertStringContainsString('Pasta.php slug «Pasta» не подходит для адреса', $e->getMessage());
+        } finally {
+            $seeds->remove();
+        }
+
+        $this->assertRowCount(0, 'posts');
+    }
+
     /**
      * @return iterable<string, array{string, string}>
      */

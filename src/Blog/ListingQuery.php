@@ -30,7 +30,7 @@ final class ListingQuery
 
         // Номер только в обычной записи: «02», «+2» и «2.0» были бы дублями второй страницы.
         // Девяти цифр с запасом хватает, а LIMIT не переполнится
-        if (!is_string($sort) || !is_string($page) || preg_match('/^[1-9][0-9]{0,8}$/', $page) !== 1) {
+        if (!is_string($sort) || !is_string($page) || preg_match('/^[1-9][0-9]{0,8}$/D', $page) !== 1) {
             throw new NotFoundException();
         }
 

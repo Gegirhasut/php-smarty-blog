@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Database;
 
+use App\Blog\Slug;
 use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
 use PDO;
@@ -83,6 +84,10 @@ final class Seeder
         }
 
         /** @var list<array{slug: string, name: string, description: string}> $categories */
+        foreach ($categories as $category) {
+            $this->requireSlug($category['slug'], $file);
+        }
+
         return $categories;
     }
 
@@ -108,7 +113,10 @@ final class Seeder
             if ($post['categories'] === []) {
                 throw new RuntimeException("В {$file} пустой список категорий");
             }
-            $posts[] = ['slug' => basename($file, '.php')] + $post;
+            // Slug статьи - имя её файла
+            $slug = basename($file, '.php');
+            $this->requireSlug($slug, $file);
+            $posts[] = ['slug' => $slug] + $post;
         }
 
         // Старые статьи получают меньшие id, как если бы их добавляли по мере публикации
@@ -125,6 +133,16 @@ final class Seeder
         $missing = is_array($data) ? array_diff($keys, array_keys($data)) : $keys;
         if ($missing !== []) {
             throw new RuntimeException("В {$file} нет полей: " . implode(', ', $missing));
+        }
+    }
+
+    private function requireSlug(mixed $slug, string $file): void
+    {
+        if (!is_string($slug) || !Slug::isValid($slug)) {
+            $value = is_string($slug) ? $slug : get_debug_type($slug);
+            throw new RuntimeException(
+                "В {$file} slug «{$value}» не подходит для адреса: нужны латиница в нижнем регистре, цифры и дефисы",
+            );
         }
     }
 

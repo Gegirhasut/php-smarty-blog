@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Blog\Slug;
 use App\Blog\Sort;
 use PDO;
 
@@ -145,6 +146,11 @@ final class PostRepository
      */
     public function findBySlug(string $slug): ?array
     {
+        // Строка не в формате slug не может быть в базе, а запрос с ней MySQL отклонил бы с ошибкой
+        if (!Slug::isValid($slug)) {
+            return null;
+        }
+
         $statement = $this->pdo->prepare(
             'SELECT id, slug, title, description, image, views, published_at, content FROM posts WHERE slug = ?',
         );

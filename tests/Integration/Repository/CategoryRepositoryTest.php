@@ -43,6 +43,8 @@ final class CategoryRepositoryTest extends DatabaseTestCase
         );
         self::assertNull($this->categories->findBySlug('Tools'));
         self::assertNull($this->categories->findBySlug('missing'));
+        // Без проверки формата MySQL ответил бы ошибкой: колонка slug в ascii
+        self::assertNull($this->categories->findBySlug('привет'));
     }
 
     public function testCategoryNamesForSeveralPosts(): void
