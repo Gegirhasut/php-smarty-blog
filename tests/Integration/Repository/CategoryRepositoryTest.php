@@ -56,7 +56,7 @@ final class CategoryRepositoryTest extends DatabaseTestCase
         $other = $this->insertPost('other', [$tools]);
 
         self::assertSame(
-            [$first => ['Инструменты', 'Агенты'], $second => ['Агенты']],
+            [$first => ['Агенты', 'Инструменты'], $second => ['Агенты']],
             $this->categories->namesByPost([$second, $first]),
         );
         self::assertArrayNotHasKey($other, $this->categories->namesByPost([$first]));
@@ -77,16 +77,17 @@ final class CategoryRepositoryTest extends DatabaseTestCase
         ], $this->categories->forSitemap());
     }
 
-    public function testListsCategoriesOfPostInIdOrder(): void
+    public function testListsCategoriesOfPostMainFirst(): void
     {
         $tools = $this->insertCategory('tools', 'Инструменты');
         $this->insertCategory('other', 'Другая');
         $agents = $this->insertCategory('agents', 'Агенты');
+        // Основная категория создана позже другой, и порядок по id поставил бы её второй
         $post = $this->insertPost('post', [$agents, $tools]);
 
         self::assertSame([
-            ['id' => $tools, 'slug' => 'tools', 'name' => 'Инструменты'],
             ['id' => $agents, 'slug' => 'agents', 'name' => 'Агенты'],
+            ['id' => $tools, 'slug' => 'tools', 'name' => 'Инструменты'],
         ], $this->categories->forPost($post));
     }
 }

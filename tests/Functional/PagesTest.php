@@ -184,8 +184,9 @@ final class PagesTest extends DatabaseTestCase
         $page = $this->page($this->site->get('/post/main'));
 
         self::assertSame('Главная статья', $page->text('//h1'));
-        self::assertSame(['Главная', 'Инструменты', 'Главная статья'], $page->texts(self::BREADCRUMBS));
-        self::assertSame(['/category/tools', '/category/agents'], $page->attributes(self::POST . '/header//a', 'href'));
+        // В крошках основная категория статьи - первая в её списке, хотя по id раньше tools
+        self::assertSame(['Главная', 'Агенты', 'Главная статья'], $page->texts(self::BREADCRUMBS));
+        self::assertSame(['/category/agents', '/category/tools'], $page->attributes(self::POST . '/header//a', 'href'));
         self::assertSame(['Вступление.'], $page->texts(self::POST . '//p[not(ancestor::header)]'));
         self::assertSame(['Раздел'], $page->texts(self::POST . '//h2'));
         self::assertSame(['первый пункт', 'второй пункт'], $page->texts(self::POST . '//li[not(ancestor::header)]'));

@@ -276,7 +276,7 @@ final class PostRepository
     }
 
     /**
-     * @param list<array{int, int}> $links пары [id статьи, id категории]
+     * @param list<array{int, int, int}> $links тройки [id статьи, id категории, место категории у статьи]
      */
     public function attachCategories(array $links): void
     {
@@ -284,8 +284,8 @@ final class PostRepository
             return;
         }
 
-        $rows = implode(', ', array_fill(0, count($links), '(?, ?)'));
-        $this->pdo->prepare("INSERT INTO category_post (post_id, category_id) VALUES {$rows}")
+        $rows = implode(', ', array_fill(0, count($links), '(?, ?, ?)'));
+        $this->pdo->prepare("INSERT INTO category_post (post_id, category_id, position) VALUES {$rows}")
             ->execute(array_merge(...$links));
     }
 }

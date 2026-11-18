@@ -33,10 +33,12 @@ CREATE TABLE IF NOT EXISTS posts (
 CREATE TABLE IF NOT EXISTS category_post (
     category_id INT UNSIGNED NOT NULL,
     post_id INT UNSIGNED NOT NULL,
-    -- Первичный ключ отвечает на «статьи категории», обратный индекс - на «категории статьи»
-    -- (похожие статьи) и нужен внешнему ключу на posts
+    -- Порядок категорий статьи, как в её файле сидера. 0 - основная: она в хлебных крошках и первой среди меток
+    position TINYINT UNSIGNED NOT NULL,
+    -- Первичный ключ отвечает на «статьи категории», второй индекс - на «категории статьи» по порядку
+    -- (метки, похожие статьи) и нужен внешнему ключу на posts. UNIQUE не даёт статье двух основных категорий
     PRIMARY KEY (category_id, post_id),
-    KEY category_post_post_id_index (post_id),
+    UNIQUE KEY category_post_post_position_unique (post_id, position),
     CONSTRAINT category_post_category_fk FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE,
     CONSTRAINT category_post_post_fk FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

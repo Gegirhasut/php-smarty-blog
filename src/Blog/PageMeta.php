@@ -76,7 +76,7 @@ final class PageMeta
 
     /**
      * @param PostCard $post
-     * @param list<CategoryLink> $categories категории статьи, первая попадает в хлебные крошки
+     * @param list<CategoryLink> $categories категории статьи, первая - основная: она попадает в хлебные крошки
      */
     public function post(array $post, array $categories): Meta
     {

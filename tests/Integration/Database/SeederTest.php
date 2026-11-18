@@ -47,6 +47,23 @@ final class SeederTest extends DatabaseTestCase
         );
     }
 
+    public function testFirstCategoryOfPostIsMain(): void
+    {
+        $this->seeder(self::FIXTURES)->run();
+
+        // В kazan.php первой указана food, хотя по id раньше travel
+        self::assertSame(
+            ['food' => 0, 'travel' => 1],
+            $this->select(
+                "SELECT c.slug, cp.position FROM category_post cp
+                 JOIN categories c ON c.id = cp.category_id
+                 JOIN posts p ON p.id = cp.post_id
+                 WHERE p.slug = 'kazan'
+                 ORDER BY cp.position",
+            )->fetchAll(PDO::FETCH_KEY_PAIR),
+        );
+    }
+
     public function testStoresPostFields(): void
     {
         $this->seeder(self::FIXTURES)->run();

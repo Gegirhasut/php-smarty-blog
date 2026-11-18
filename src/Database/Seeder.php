@@ -165,7 +165,7 @@ final class Seeder
 
     /**
      * @param list<array{slug: string, categories: list<string>}> $posts
-     * @return list<array{int, int}>
+     * @return list<array{int, int, int}>
      */
     private function links(array $posts): array
     {
@@ -174,10 +174,11 @@ final class Seeder
 
         $links = [];
         foreach ($posts as $post) {
-            foreach ($post['categories'] as $slug) {
+            // Первая категория в файле статьи - основная
+            foreach ($post['categories'] as $position => $slug) {
                 $categoryId = $categoryIds[$slug]
                     ?? throw new RuntimeException("У статьи {$post['slug']} неизвестная категория {$slug}");
-                $links[] = [$postIds[$post['slug']], $categoryId];
+                $links[] = [$postIds[$post['slug']], $categoryId, $position];
             }
         }
 

@@ -63,6 +63,15 @@ final class SchemaTest extends DatabaseTestCase
         $this->pdo->exec("INSERT INTO categories (name, slug, description) VALUES ('Еда', 'еда', '')");
     }
 
+    public function testPostHasOneCategoryAtEachPosition(): void
+    {
+        $this->insertPostInCategory();
+        $this->pdo->exec("INSERT INTO categories (id, name, slug, description) VALUES (2, 'Еда', 'food', '')");
+
+        $this->expectException(PDOException::class);
+        $this->pdo->exec('INSERT INTO category_post (category_id, post_id, position) VALUES (2, 1, 0)');
+    }
+
     public function testDeletingPostRemovesItsCategoryLinks(): void
     {
         $this->insertPostInCategory();
@@ -80,6 +89,6 @@ final class SchemaTest extends DatabaseTestCase
             "INSERT INTO posts (id, title, slug, image, description, content, published_at)
              VALUES (1, 'Байкал', 'baikal', '/uploads/baikal.webp', '', '', '2026-10-01 10:00:00')",
         );
-        $this->pdo->exec('INSERT INTO category_post (category_id, post_id) VALUES (1, 1)');
+        $this->pdo->exec('INSERT INTO category_post (category_id, post_id, position) VALUES (1, 1, 0)');
     }
 }

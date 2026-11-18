@@ -56,7 +56,7 @@ final class CategoryRepository
     }
 
     /**
-     * Категории статьи в том же порядке, что и в меню.
+     * Категории статьи, первой - основная.
      *
      * @return list<CategoryLink>
      */
@@ -66,7 +66,7 @@ final class CategoryRepository
             'SELECT c.id, c.slug, c.name FROM categories c
              JOIN category_post cp ON cp.category_id = c.id
              WHERE cp.post_id = ?
-             ORDER BY cp.category_id',
+             ORDER BY cp.position',
         );
         $statement->execute([$postId]);
 
@@ -78,7 +78,7 @@ final class CategoryRepository
      * Названия категорий сразу для нескольких статей одним запросом.
      *
      * @param list<int> $postIds
-     * @return array<int, list<string>> id статьи => названия её категорий в порядке меню
+     * @return array<int, list<string>> id статьи => названия её категорий, первой - основная
      */
     public function namesByPost(array $postIds): array
     {
@@ -91,7 +91,7 @@ final class CategoryRepository
             "SELECT cp.post_id, c.name FROM category_post cp
              JOIN categories c ON c.id = cp.category_id
              WHERE cp.post_id IN ({$placeholders})
-             ORDER BY cp.post_id, cp.category_id",
+             ORDER BY cp.post_id, cp.position",
         );
         $statement->execute($postIds);
 

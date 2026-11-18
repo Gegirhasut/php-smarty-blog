@@ -124,8 +124,10 @@ abstract class DatabaseTestCase extends TestCase
         ]);
         $postId = (int) $this->pdo->lastInsertId();
 
-        foreach ($categoryIds as $categoryId) {
-            $this->pdo->prepare('INSERT INTO category_post (category_id, post_id) VALUES (?, ?)')->execute([$categoryId, $postId]);
+        // Первая категория в списке - основная, как в сидере
+        foreach ($categoryIds as $position => $categoryId) {
+            $this->pdo->prepare('INSERT INTO category_post (category_id, post_id, position) VALUES (?, ?, ?)')
+                ->execute([$categoryId, $postId, $position]);
         }
 
         return $postId;
