@@ -8,6 +8,7 @@ use App\Blog\Category;
 use App\Blog\ListingQuery;
 use App\Blog\Post;
 use App\Blog\Sort;
+use App\Blog\Urls;
 use App\Core\Config;
 use App\Seo\Meta;
 use App\Seo\PageMeta;
@@ -21,7 +22,7 @@ final class PageMetaTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->meta = new PageMeta(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', debug: false));
+        $this->meta = new PageMeta(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', debug: false), new Urls('https://blog.test'));
         $this->category = new Category(1, 'tools', 'Инструменты', 'Обзоры сервисов.');
     }
 

@@ -6,6 +6,7 @@ namespace App\Seo;
 
 use App\Blog\Category;
 use App\Blog\PostCard;
+use App\Blog\Urls;
 use App\Core\Config;
 
 /**
@@ -15,8 +16,10 @@ use App\Core\Config;
  */
 final class LlmsTxt
 {
-    public function __construct(private readonly Config $config)
-    {
+    public function __construct(
+        private readonly Config $config,
+        private readonly Urls $urls,
+    ) {
     }
 
     /**
@@ -32,11 +35,11 @@ final class LlmsTxt
             $lines[] = '';
             $lines[] = $this->link(
                 "{$category->name}: все статьи",
-                '/category/' . $category->slug,
+                $this->urls->category($category->slug),
                 $category->description,
             );
             foreach ($section['posts'] as $post) {
-                $lines[] = $this->link($post->title, '/post/' . $post->slug, $post->description);
+                $lines[] = $this->link($post->title, $this->urls->post($post->slug), $post->description);
             }
             $lines[] = '';
         }
@@ -44,7 +47,7 @@ final class LlmsTxt
         // Раздел Optional по формату можно пропустить, если нужен короткий контекст
         $lines[] = '## Optional';
         $lines[] = '';
-        $lines[] = $this->link('RSS', '/feed.xml', 'последние статьи блога');
+        $lines[] = $this->link('RSS', $this->urls->feed(), 'последние статьи блога');
 
         return implode("\n", $lines) . "\n";
     }
@@ -53,7 +56,7 @@ final class LlmsTxt
     {
         $title = str_replace(['\\', '[', ']'], ['\\\\', '\\[', '\\]'], $this->inline($title));
 
-        return "- [{$title}]({$this->config->siteUrl}{$path}): " . $this->inline($description);
+        return "- [{$title}]({$this->urls->absolute($path)}): " . $this->inline($description);
     }
 
     /**

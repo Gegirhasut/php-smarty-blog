@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Seo;
 
 use App\Blog\Category;
 use App\Blog\PostCard;
+use App\Blog\Urls;
 use App\Core\Config;
 use App\Seo\LlmsTxt;
 use DateTimeImmutable;
@@ -17,7 +18,7 @@ final class LlmsTxtTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->llms = new LlmsTxt(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', debug: false));
+        $this->llms = new LlmsTxt(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', debug: false), new Urls('https://blog.test'));
     }
 
     public function testListsCategoriesWithTheirPosts(): void

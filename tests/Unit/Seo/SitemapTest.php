@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Seo;
 
+use App\Blog\Urls;
 use App\Seo\Sitemap;
 use DateTimeImmutable;
 use DOMDocument;
@@ -13,7 +14,7 @@ final class SitemapTest extends TestCase
 {
     public function testListsHomeCategoriesAndPosts(): void
     {
-        $xml = (new Sitemap('https://blog.test'))->render(
+        $xml = (new Sitemap(new Urls('https://blog.test')))->render(
             ['tools' => new DateTimeImmutable('2026-10-05 10:00:00')],
             [
                 'new' => new DateTimeImmutable('2026-10-05 10:00:00'),
@@ -36,7 +37,7 @@ final class SitemapTest extends TestCase
 
     public function testEmptyBlogHasHomeWithoutDate(): void
     {
-        self::assertSame(['https://blog.test/' => ''], $this->urls((new Sitemap('https://blog.test'))->render([], [])));
+        self::assertSame(['https://blog.test/' => ''], $this->urls((new Sitemap(new Urls('https://blog.test')))->render([], [])));
     }
 
     /**

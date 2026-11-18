@@ -90,16 +90,16 @@ final class ListingQueryTest extends TestCase
         self::assertSame($canonical, ListingQuery::parse($params)->isCanonical($params));
     }
 
-    public function testBuildsAddressWithoutDefaults(): void
+    public function testAddressParamsSkipDefaults(): void
     {
-        self::assertSame('/category/tools', (new ListingQuery())->url('/category/tools'));
-        self::assertSame('/category/tools?page=2', (new ListingQuery(page: 2))->url('/category/tools'));
-        self::assertSame('/category/tools?sort=views', (new ListingQuery(Sort::Views))->url('/category/tools'));
-        self::assertSame('/category/tools?sort=views&page=3', (new ListingQuery(Sort::Views, 3))->url('/category/tools'));
+        self::assertSame([], (new ListingQuery())->params());
+        self::assertSame(['page' => 2], (new ListingQuery(page: 2))->params());
+        self::assertSame(['sort' => 'views'], (new ListingQuery(Sort::Views))->params());
+        self::assertSame(['sort' => 'views', 'page' => 3], (new ListingQuery(Sort::Views, 3))->params());
     }
 
     public function testWithPageKeepsSort(): void
     {
-        self::assertSame('/c?sort=views', (new ListingQuery(Sort::Views, 3))->withPage(1)->url('/c'));
+        self::assertSame(['sort' => 'views'], (new ListingQuery(Sort::Views, 3))->withPage(1)->params());
     }
 }

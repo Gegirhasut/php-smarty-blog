@@ -55,15 +55,15 @@ final class ListingQuery
     }
 
     /**
-     * Адрес страницы без значений по умолчанию, параметры всегда в одном порядке.
+     * Параметры для адреса: значения по умолчанию не пишутся, порядок всегда один.
+     *
+     * @return array<string, string|int>
      */
-    public function url(string $path): string
+    public function params(): array
     {
-        $params = array_filter([
+        return array_filter([
             'sort' => $this->sort === Sort::Date ? null : $this->sort->value,
             'page' => $this->page === 1 ? null : $this->page,
         ]);
-
-        return $params === [] ? $path : $path . '?' . http_build_query($params);
     }
 }

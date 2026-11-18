@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Seo;
 
 use App\Blog\PostCard;
+use App\Blog\Urls;
 use App\Core\Config;
 use XMLWriter;
 
@@ -13,8 +14,10 @@ use XMLWriter;
  */
 final class RssFeed
 {
-    public function __construct(private readonly Config $config)
-    {
+    public function __construct(
+        private readonly Config $config,
+        private readonly Urls $urls,
+    ) {
     }
 
     /**
@@ -23,8 +26,6 @@ final class RssFeed
      */
     public function render(array $posts, array $categories): string
     {
-        $siteUrl = $this->config->siteUrl;
-
         $xml = new XMLWriter();
         $xml->openMemory();
         $xml->setIndent(true);
@@ -35,18 +36,18 @@ final class RssFeed
         $xml->startElement('channel');
 
         $xml->writeElement('title', $this->config->siteName);
-        $xml->writeElement('link', $siteUrl . '/');
+        $xml->writeElement('link', $this->urls->absolute($this->urls->home()));
         $xml->writeElement('description', $this->config->siteDescription);
         $xml->writeElement('language', 'ru');
         // Адрес самой ленты: по нему читалки узнают, откуда она пришла
         $xml->startElement('atom:link');
-        $xml->writeAttribute('href', $siteUrl . '/feed.xml');
+        $xml->writeAttribute('href', $this->urls->absolute($this->urls->feed()));
         $xml->writeAttribute('rel', 'self');
         $xml->writeAttribute('type', 'application/rss+xml');
         $xml->endElement();
 
         foreach ($posts as $post) {
-            $link = $siteUrl . '/post/' . $post->slug;
+            $link = $this->urls->absolute($this->urls->post($post->slug));
             $xml->startElement('item');
             $xml->writeElement('title', $post->title);
             $xml->writeElement('link', $link);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Seo;
 
+use App\Blog\Urls;
 use DateTimeImmutable;
 use XMLWriter;
 
@@ -13,7 +14,7 @@ use XMLWriter;
  */
 final class Sitemap
 {
-    public function __construct(private readonly string $siteUrl)
+    public function __construct(private readonly Urls $urls)
     {
     }
 
@@ -31,12 +32,12 @@ final class Sitemap
         $xml->writeAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9');
 
         // Главная меняется вместе с самой свежей статьёй
-        $this->url($xml, '/', $posts === [] ? null : reset($posts));
+        $this->url($xml, $this->urls->home(), $posts === [] ? null : reset($posts));
         foreach ($categories as $slug => $updatedAt) {
-            $this->url($xml, '/category/' . $slug, $updatedAt);
+            $this->url($xml, $this->urls->category($slug), $updatedAt);
         }
         foreach ($posts as $slug => $publishedAt) {
-            $this->url($xml, '/post/' . $slug, $publishedAt);
+            $this->url($xml, $this->urls->post($slug), $publishedAt);
         }
 
         $xml->endElement();
@@ -48,7 +49,7 @@ final class Sitemap
     private function url(XMLWriter $xml, string $path, ?DateTimeImmutable $updatedAt): void
     {
         $xml->startElement('url');
-        $xml->writeElement('loc', $this->siteUrl . $path);
+        $xml->writeElement('loc', $this->urls->absolute($path));
         if ($updatedAt !== null) {
             $xml->writeElement('lastmod', $updatedAt->format(DATE_ATOM));
         }

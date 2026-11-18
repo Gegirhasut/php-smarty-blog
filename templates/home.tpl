@@ -13,7 +13,7 @@
                 <h2 class="section__title" id="category-{$category->slug}">{$category->name}</h2>
                 <p class="section__description">{$category->description}</p>
                 {* У всех ссылок «Все статьи» одинаковый текст, aria-label говорит, куда ведёт каждая *}
-                <a class="section__more" href="/category/{$category->slug}" aria-label="Все статьи: {$category->name}">Все статьи</a>
+                <a class="section__more" href="{$urls->category($category->slug)}" aria-label="Все статьи: {$category->name}">Все статьи</a>
             </header>
             <div class="cards">
                 {foreach $section.posts as $post}

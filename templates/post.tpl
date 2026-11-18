@@ -7,7 +7,7 @@
             <header class="post__header">
                 <ul class="post__categories">
                     {foreach $postCategories as $item}
-                        <li><a class="post__category" href="/category/{$item->slug}">{$item->name}</a></li>
+                        <li><a class="post__category" href="{$urls->category($item->slug)}">{$item->name}</a></li>
                     {/foreach}
                 </ul>
                 <h1 class="post__title">{$post->title}</h1>
@@ -48,7 +48,7 @@
                 <h2 class="sidebar__title" id="categories-title">Категории</h2>
                 <ul class="sidebar__list">
                     {foreach $categories as $item}
-                        <li><a class="sidebar__link" href="/category/{$item->slug}">{$item->name}</a></li>
+                        <li><a class="sidebar__link" href="{$urls->category($item->slug)}">{$item->name}</a></li>
                     {/foreach}
                 </ul>
             </section>

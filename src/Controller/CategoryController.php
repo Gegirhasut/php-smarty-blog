@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Blog\ListingQuery;
 use App\Blog\Sort;
+use App\Blog\Urls;
 use App\Core\NotFoundException;
 use App\Core\Pagination;
 use App\Core\Request;
@@ -23,6 +24,7 @@ final class CategoryController
     public function __construct(
         private readonly View $view,
         private readonly PageMeta $meta,
+        private readonly Urls $urls,
         private readonly CategoryRepository $categories,
         private readonly PostRepository $posts,
     ) {
@@ -32,10 +34,9 @@ final class CategoryController
     {
         $category = $this->categories->findBySlug($slug) ?? throw new NotFoundException();
         $query = ListingQuery::parse($request->query);
-        $path = "/category/{$category->slug}";
 
         if (!$query->isCanonical($request->query)) {
-            return Response::redirect($query->url($path));
+            return Response::redirect($this->urls->category($category->slug, $query));
         }
 
         $pagination = new Pagination($query->page, $this->posts->countInCategory($category->id), self::PER_PAGE);
@@ -52,10 +53,12 @@ final class CategoryController
             // Смена сортировки возвращает на первую страницу
             'sorts' => array_map(fn (Sort $sort): array => [
                 'label' => $sort->label(),
-                'url' => (new ListingQuery($sort))->url($path),
+                'url' => $this->urls->category($category->slug, new ListingQuery($sort)),
                 'current' => $sort === $query->sort,
             ], Sort::cases()),
-            'pagination' => $pagination->links(fn (int $page): string => $query->withPage($page)->url($path)),
+            'pagination' => $pagination->links(
+                fn (int $page): string => $this->urls->category($category->slug, $query->withPage($page)),
+            ),
         ]));
     }
 }

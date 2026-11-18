@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Seo;
 
 use App\Blog\PostCard;
+use App\Blog\Urls;
 use App\Core\Config;
 use App\Seo\RssFeed;
 use DateTimeImmutable;
@@ -18,7 +19,7 @@ final class RssFeedTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->feed = new RssFeed(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', debug: false));
+        $this->feed = new RssFeed(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', debug: false), new Urls('https://blog.test'));
     }
 
     public function testDescribesChannel(): void

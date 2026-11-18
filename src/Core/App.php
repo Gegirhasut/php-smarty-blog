@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Blog\Urls;
 use App\Controller\CategoryController;
 use App\Controller\FeedController;
 use App\Controller\HomeController;
@@ -24,6 +25,7 @@ use Throwable;
 final class App
 {
     private readonly View $view;
+    private readonly Urls $urls;
     private readonly PageMeta $meta;
     private readonly Router $router;
     private ?PDO $pdo = null;
@@ -41,12 +43,10 @@ final class App
             compileDir: $rootDir . '/var/templates_c',
             debug: $config->debug,
         );
-        $this->view->share('site', [
-            'name' => $config->siteName,
-            'description' => $config->siteDescription,
-            'url' => $config->siteUrl,
-        ]);
-        $this->meta = new PageMeta($config);
+        $this->urls = new Urls($config->siteUrl);
+        $this->view->share('site', ['name' => $config->siteName, 'description' => $config->siteDescription]);
+        $this->view->share('urls', $this->urls);
+        $this->meta = new PageMeta($config, $this->urls);
         $this->router = $this->routes();
     }
 
@@ -99,6 +99,7 @@ final class App
         $router->add('/category/{slug}', fn (Request $request, array $params): Response => (new CategoryController(
             $this->view,
             $this->meta,
+            $this->urls,
             $this->categories(),
             $this->posts(),
         ))->show($request, $params['slug']));
@@ -109,20 +110,20 @@ final class App
             $this->posts(),
         ))->show($request, $params['slug']));
         $router->add('/sitemap.xml', fn (): Response => (new SitemapController(
-            new Sitemap($this->config->siteUrl),
+            new Sitemap($this->urls),
             $this->categories(),
             $this->posts(),
         ))->index());
         $router->add('/feed.xml', fn (): Response => (new FeedController(
-            new RssFeed($this->config),
+            new RssFeed($this->config, $this->urls),
             $this->categories(),
             $this->posts(),
         ))->index());
         $router->add('/llms.txt', fn (): Response => (new LlmsController(
-            new LlmsTxt($this->config),
+            new LlmsTxt($this->config, $this->urls),
             $this->posts(),
         ))->index());
-        $router->add('/robots.txt', fn (): Response => (new RobotsController($this->config->siteUrl))->index());
+        $router->add('/robots.txt', fn (): Response => (new RobotsController($this->urls))->index());
 
         return $router;
     }

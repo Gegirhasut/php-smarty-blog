@@ -4,7 +4,7 @@
 <article class="card{if $modifier} card--{$modifier}{/if}">
     {include "partials/cover.tpl" class="card__image" src=$post->image alt="" priority=$priority}
     <div class="card__body">
-        <h{$level} class="card__title"><a class="card__link" href="/post/{$post->slug}">{$post->title}</a></h{$level}>
+        <h{$level} class="card__title"><a class="card__link" href="{$urls->post($post->slug)}">{$post->title}</a></h{$level}>
         <p class="card__description">{$post->description}</p>
         {include "partials/post-info.tpl" post=$post}
     </div>

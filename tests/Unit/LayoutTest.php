@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit;
 
 use App\Blog\Category;
+use App\Blog\Urls;
 use App\Core\View;
 use App\Seo\Meta;
 use App\Tests\Html;
@@ -21,7 +22,8 @@ final class LayoutTest extends TestCase
     {
         self::$compiled = new TempDir();
         self::$view = new View(dirname(__DIR__, 2) . '/templates', self::$compiled->path, debug: true);
-        self::$view->share('site', ['name' => 'Блог', 'description' => 'Блог об ИИ.', 'url' => 'https://blog.test']);
+        self::$view->share('site', ['name' => 'Блог', 'description' => 'Блог об ИИ.']);
+        self::$view->share('urls', new Urls('https://blog.test'));
     }
 
     public static function tearDownAfterClass(): void
