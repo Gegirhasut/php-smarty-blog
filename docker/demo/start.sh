@@ -1,8 +1,10 @@
 #!/bin/bash
-# Запуск демо: MySQL, затем схема и сидер, затем php-fpm и nginx. База каждый раз создаётся заново,
-# данные живут до перезапуска контейнера. Если любой из процессов завершится, контейнер остановится целиком,
-# а по SIGTERM останавливаются все три
+# Запуск демо: MySQL с базой, засеянной при сборке образа, затем php-fpm и nginx. Изменения (просмотры) живут
+# до перезапуска контейнера. Если любой из процессов завершится, контейнер остановится целиком,
+# а по SIGTERM останавливаются все три.
+# start-demo build - вызов из Dockerfile: поднять MySQL, применить схему и засеять базу, остановить MySQL
 set -euo pipefail
+mode="${1:-run}"
 
 # Render передаёт порт в PORT, а адрес сервиса - в RENDER_EXTERNAL_URL
 export PORT="${PORT:-10000}"
@@ -25,7 +27,7 @@ stop() {
 }
 trap 'stop; exit 0' TERM INT
 
-# Пользователь и база сайта создаются при старте MySQL; IF NOT EXISTS - на случай перезапуска того же контейнера.
+# База и пользователь сайта создаются при сборке, при каждом старте пользователь получает новый пароль.
 # Сайт ходит в MySQL через сокет (DB_HOST=localhost), поэтому пользователь - 'blog'@'localhost'
 init=/run/mysqld/init.sql
 cat > "$init" <<SQL
@@ -67,9 +69,14 @@ until [[ -S /run/mysqld/mysqld.sock ]] && error="$(php -r 'require "vendor/autol
     sleep 2
 done
 rm "$init"
-log "MySQL готов за $(( SECONDS - started )) с; схема и сидер"
+log "MySQL готов за $(( SECONDS - started )) с"
 
-php bin/seed.php --fresh
+if [[ $mode == build ]]; then
+    php bin/seed.php --fresh
+    stop
+    rm "$mysql_log"
+    exit 0
+fi
 
 sed -e "s/listen 80;/listen ${PORT};/" -e 's/fastcgi_pass php:9000;/fastcgi_pass 127.0.0.1:9000;/' \
     /etc/nginx/site.conf.dist > /etc/nginx/site.conf

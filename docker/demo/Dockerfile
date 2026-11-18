@@ -49,7 +49,7 @@ COPY docker/demo/start.sh /usr/local/bin/start-demo
 COPY docker/nginx/default.conf /etc/nginx/site.conf.dist
 
 # Системные таблицы MySQL создаются при сборке: на 0,1 CPU бесплатного плана это заняло бы при каждом старте
-# лишние десятки секунд. База сайта и её данные всё равно создаются заново при каждом старте
+# лишние десятки секунд
 RUN mysqld --initialize-insecure \
     && chmod +x /usr/local/bin/start-demo \
     && grep -q 'listen 80;' /etc/nginx/site.conf.dist \
@@ -69,6 +69,10 @@ ENV APP_ENV=prod \
     DB_HOST=localhost \
     DB_NAME=blog \
     DB_USER=blog
+
+# База засевается при сборке: в песочнице Render на 0,1 CPU сидер при каждом старте занимал больше минуты.
+# При старте MySQL открывает готовые данные, а пароль пользователя сайта задаётся заново
+RUN start-demo build
 
 # Образ php останавливают SIGQUIT (мягкая остановка php-fpm), а start-demo по SIGTERM останавливает все три процесса
 STOPSIGNAL SIGTERM
