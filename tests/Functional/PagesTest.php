@@ -8,6 +8,8 @@ use App\Core\Response;
 use App\Tests\DatabaseTestCase;
 use App\Tests\Html;
 use App\Tests\TempDir;
+use DOMDocument;
+use DOMNode;
 use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -218,6 +220,28 @@ final class PagesTest extends DatabaseTestCase
 
         self::assertSame(2000, $this->views('post'));
         self::assertSame('Просмотры: 2 000', $page->text('//article//span[@class="post-info__views"]'));
+    }
+
+    public function testSitemap(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $this->insertCategory('empty');
+        $this->insertPost('old', [$tools], '2026-09-01 10:00:00');
+        $this->insertPost('new', [$tools], '2026-10-05 10:00:00');
+
+        $response = $this->site->get('/sitemap.xml');
+
+        self::assertSame(200, $response->status);
+        self::assertSame('application/xml; charset=utf-8', $response->headers['Content-Type']);
+        $document = new DOMDocument();
+        self::assertTrue($document->loadXML($response->body));
+        $locs = array_map(fn (DOMNode $node): string => $node->textContent, iterator_to_array($document->getElementsByTagName('loc')));
+        self::assertSame([
+            'http://blog.test/',
+            'http://blog.test/category/tools',
+            'http://blog.test/post/new',
+            'http://blog.test/post/old',
+        ], $locs);
     }
 
     /**

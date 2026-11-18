@@ -162,6 +162,18 @@ final class PostRepositoryTest extends DatabaseTestCase
         );
     }
 
+    public function testSitemapListsAllPostsNewestFirst(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $this->insertPost('old', [$tools], '2026-09-01 10:00:00');
+        $this->insertPost('new', [$tools], '2026-10-05 10:00:00');
+
+        self::assertSame([
+            ['slug' => 'new', 'published_at' => '2026-10-05 10:00:00'],
+            ['slug' => 'old', 'published_at' => '2026-09-01 10:00:00'],
+        ], $this->posts->forSitemap());
+    }
+
     public function testPostWithoutNeighboursHasNoSimilar(): void
     {
         $post = $this->insertPost('alone', [$this->insertCategory('tools')]);

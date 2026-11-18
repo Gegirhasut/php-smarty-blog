@@ -43,6 +43,20 @@ final class CategoryRepositoryTest extends DatabaseTestCase
         self::assertNull($this->categories->findBySlug('missing'));
     }
 
+    public function testSitemapDatesAreNewestPostOfCategory(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $this->insertCategory('empty');
+        $agents = $this->insertCategory('agents');
+        $this->insertPost('old', [$tools, $agents], '2026-09-01 10:00:00');
+        $this->insertPost('new', [$tools], '2026-10-05 10:00:00');
+
+        self::assertSame([
+            ['slug' => 'tools', 'updated_at' => '2026-10-05 10:00:00'],
+            ['slug' => 'agents', 'updated_at' => '2026-09-01 10:00:00'],
+        ], $this->categories->forSitemap());
+    }
+
     public function testListsCategoriesOfPostInIdOrder(): void
     {
         $tools = $this->insertCategory('tools', 'Инструменты');

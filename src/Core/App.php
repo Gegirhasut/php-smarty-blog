@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Core;
 
 use App\Blog\PageMeta;
+use App\Blog\Sitemap;
 use App\Controller\CategoryController;
 use App\Controller\HomeController;
 use App\Controller\PostController;
+use App\Controller\RobotsController;
+use App\Controller\SitemapController;
 use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
 use Closure;
@@ -38,29 +41,7 @@ final class App
             'description' => $config->siteDescription,
             'url' => $config->siteUrl,
         ]);
-        $meta = new PageMeta($config);
-
-        // Контроллер и его репозитории создаются только для совпавшего маршрута,
-        // поэтому на 404 и 405 соединение с БД не открывается
-        $this->router = new Router();
-        $this->router->add('/', fn (): Response => (new HomeController(
-            $this->view,
-            $meta,
-            $this->categories(),
-            $this->posts(),
-        ))->index());
-        $this->router->add('/category/{slug}', fn (Request $request, array $params): Response => (new CategoryController(
-            $this->view,
-            $meta,
-            $this->categories(),
-            $this->posts(),
-        ))->show($request, $params['slug']));
-        $this->router->add('/post/{slug}', fn (Request $request, array $params): Response => (new PostController(
-            $this->view,
-            $meta,
-            $this->categories(),
-            $this->posts(),
-        ))->show($request, $params['slug']));
+        $this->router = $this->routes();
     }
 
     public function handle(Request $request): Response
@@ -93,6 +74,43 @@ final class App
 
             return new Response($html, 404);
         }
+    }
+
+    /**
+     * Контроллер и его репозитории создаются только для совпавшего маршрута, а соединение с БД - при первом
+     * обращении к репозиторию, поэтому 404, 405 и robots.txt обходятся без базы.
+     */
+    private function routes(): Router
+    {
+        $meta = new PageMeta($this->config);
+        $router = new Router();
+
+        $router->add('/', fn (): Response => (new HomeController(
+            $this->view,
+            $meta,
+            $this->categories(),
+            $this->posts(),
+        ))->index());
+        $router->add('/category/{slug}', fn (Request $request, array $params): Response => (new CategoryController(
+            $this->view,
+            $meta,
+            $this->categories(),
+            $this->posts(),
+        ))->show($request, $params['slug']));
+        $router->add('/post/{slug}', fn (Request $request, array $params): Response => (new PostController(
+            $this->view,
+            $meta,
+            $this->categories(),
+            $this->posts(),
+        ))->show($request, $params['slug']));
+        $router->add('/sitemap.xml', fn (): Response => (new SitemapController(
+            new Sitemap($this->config->siteUrl),
+            $this->categories(),
+            $this->posts(),
+        ))->index());
+        $router->add('/robots.txt', fn (): Response => (new RobotsController($this->config->siteUrl))->index());
+
+        return $router;
     }
 
     private function categories(): CategoryRepository

@@ -61,6 +61,8 @@ final class AppTest extends TestCase
             'главная' => ['/'],
             'категория' => ['/category/tools'],
             'статья' => ['/post/first'],
+            'sitemap' => ['/sitemap.xml'],
+            'robots' => ['/robots.txt'],
             'неизвестная страница' => ['/missing'],
         ];
     }
@@ -73,6 +75,15 @@ final class AppTest extends TestCase
         self::assertSame(405, $response->status);
         self::assertSame('GET, HEAD', $response->headers['Allow']);
         self::assertSame('', $response->body);
+    }
+
+    public function testRobotsPointsToSitemap(): void
+    {
+        $response = $this->site->get('/robots.txt');
+
+        self::assertSame(200, $response->status);
+        self::assertSame('text/plain; charset=utf-8', $response->headers['Content-Type']);
+        self::assertSame("User-agent: *\nDisallow:\n\nSitemap: http://blog.test/sitemap.xml\n", $response->body);
     }
 
     public function testBrokenNotFoundPageBecomesServerError(): void

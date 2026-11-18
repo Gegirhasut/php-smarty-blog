@@ -190,6 +190,21 @@ final class PostRepository
     }
 
     /**
+     * Все статьи для sitemap, от новых к старым. В один файл sitemap помещается 50 000 адресов:
+     * блогу до этого далеко, а больше понадобился бы индекс из нескольких файлов.
+     *
+     * @return list<array{slug: string, published_at: string}>
+     */
+    public function forSitemap(): array
+    {
+        $statement = $this->pdo->prepare('SELECT slug, published_at FROM posts ORDER BY published_at DESC, id DESC');
+        $statement->execute();
+
+        /** @var list<array{slug: string, published_at: string}> */
+        return $statement->fetchAll();
+    }
+
+    /**
      * @return array<string, int>
      */
     public function idsBySlug(): array

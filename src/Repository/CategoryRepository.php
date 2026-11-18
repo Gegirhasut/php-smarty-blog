@@ -68,6 +68,27 @@ final class CategoryRepository
         return $statement->fetchAll();
     }
 
+    /**
+     * Категории со статьями и дата самой свежей из них - для lastmod в sitemap.
+     * slug можно выбирать при GROUP BY c.id: он зависит от первичного ключа.
+     *
+     * @return list<array{slug: string, updated_at: string}>
+     */
+    public function forSitemap(): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT c.slug, MAX(p.published_at) AS updated_at FROM categories c
+             JOIN category_post cp ON cp.category_id = c.id
+             JOIN posts p ON p.id = cp.post_id
+             GROUP BY c.id
+             ORDER BY c.id',
+        );
+        $statement->execute();
+
+        /** @var list<array{slug: string, updated_at: string}> */
+        return $statement->fetchAll();
+    }
+
     public function count(): int
     {
         $statement = $this->pdo->prepare('SELECT COUNT(*) FROM categories');
