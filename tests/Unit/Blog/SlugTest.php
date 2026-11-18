@@ -18,7 +18,9 @@ final class SlugTest extends TestCase
         return [
             'слово' => ['tools', true],
             'через дефис с цифрами' => ['gpt-6-1-terra', true],
-            'одна цифра' => ['7', true],
+            'начинается с цифр' => ['2026-itogi', true],
+            'одна цифра' => ['7', false],
+            'одни цифры' => ['2026', false],
             'кириллица' => ['привет', false],
             'верхний регистр' => ['Tools', false],
             'подчёркивание' => ['ii_agenty', false],
