@@ -5,16 +5,11 @@ declare(strict_types=1);
 namespace App\Blog;
 
 use App\Core\Config;
-use App\Repository\CategoryRepository;
-use App\Repository\PostRepository;
 
 /**
  * llms.txt по формату llmstxt.org: название, описание цитатой и разделы со ссылками,
  * после двоеточия - краткое описание страницы. Это Markdown, поэтому HTML-экранирование здесь не нужно,
  * но квадратные скобки в тексте ссылки экранируются, чтобы не сломать её.
- *
- * @phpstan-import-type Category from CategoryRepository
- * @phpstan-import-type PostCard from PostRepository
  */
 final class LlmsTxt
 {
@@ -31,15 +26,15 @@ final class LlmsTxt
 
         foreach ($sections as $section) {
             $category = $section['category'];
-            $lines[] = '## ' . $this->inline($category['name']);
+            $lines[] = '## ' . $this->inline($category->name);
             $lines[] = '';
             $lines[] = $this->link(
-                "{$category['name']}: все статьи",
-                '/category/' . $category['slug'],
-                $category['description'],
+                "{$category->name}: все статьи",
+                '/category/' . $category->slug,
+                $category->description,
             );
             foreach ($section['posts'] as $post) {
-                $lines[] = $this->link($post['title'], '/post/' . $post['slug'], $post['description']);
+                $lines[] = $this->link($post->title, '/post/' . $post->slug, $post->description);
             }
             $lines[] = '';
         }

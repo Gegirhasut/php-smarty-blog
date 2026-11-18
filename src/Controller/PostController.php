@@ -31,12 +31,12 @@ final class PostController
 
         // HEAD шлют проверки ссылок и боты, а не читатели: такой запрос просмотром не считается
         if ($request->method === 'GET') {
-            $this->posts->incrementViews($post['id']);
-            $post['views']++;
+            $this->posts->incrementViews($post->id);
+            $post = $post->withViews($post->views + 1);
         }
 
-        $categories = $this->categories->forPost($post['id']);
-        $text = new ArticleText($post['content']);
+        $categories = $this->categories->forPost($post->id);
+        $text = new ArticleText($post->content);
 
         return new Response($this->view->render('post.tpl', [
             'meta' => $this->meta->post($post, $categories),
@@ -45,7 +45,7 @@ final class PostController
             'postCategories' => $categories,
             'blocks' => $text->blocks(),
             'readingMinutes' => $text->readingMinutes(),
-            'similar' => $this->posts->similar($post['id'], self::SIMILAR_POSTS),
+            'similar' => $this->posts->similar($post->id, self::SIMILAR_POSTS),
         ]));
     }
 }

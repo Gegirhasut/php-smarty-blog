@@ -21,7 +21,7 @@ final class SitemapController
     public function index(): Response
     {
         return new Response(
-            $this->sitemap->render($this->categories->forSitemap(), $this->posts->forSitemap()),
+            $this->sitemap->render($this->categories->lastPostDates(), $this->posts->publishedDates()),
             headers: ['Content-Type' => 'application/xml; charset=utf-8'],
         );
     }

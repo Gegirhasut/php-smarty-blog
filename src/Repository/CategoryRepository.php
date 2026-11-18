@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Blog\Category;
 use App\Blog\Slug;
+use App\Database\Row;
+use DateTimeImmutable;
 use PDO;
 
-/**
- * @phpstan-type CategoryLink array{id: int, slug: string, name: string}
- * @phpstan-type Category array{id: int, slug: string, name: string, description: string}
- */
 final class CategoryRepository
 {
     public function __construct(private readonly PDO $pdo)
@@ -21,25 +20,21 @@ final class CategoryRepository
      * Категории, в которых есть статьи, для меню. Порядок задаёт categories.php: сидер вставляет категории
      * по порядку, поэтому сортировка по id. Пустые категории не показываем, как и на главной.
      *
-     * @return list<CategoryLink>
+     * @return list<Category>
      */
     public function withPosts(): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT c.id, c.slug, c.name FROM categories c
+            'SELECT c.id, c.slug, c.name, c.description FROM categories c
              WHERE EXISTS (SELECT 1 FROM category_post cp WHERE cp.category_id = c.id)
              ORDER BY c.id',
         );
         $statement->execute();
 
-        /** @var list<CategoryLink> */
-        return $statement->fetchAll();
+        return array_map(Category::fromRow(...), Row::all($statement));
     }
 
-    /**
-     * @return Category|null
-     */
-    public function findBySlug(string $slug): ?array
+    public function findBySlug(string $slug): ?Category
     {
         // Строка не в формате slug не может быть в базе, а запрос с ней MySQL отклонил бы с ошибкой
         if (!Slug::isValid($slug)) {
@@ -48,30 +43,27 @@ final class CategoryRepository
 
         $statement = $this->pdo->prepare('SELECT id, slug, name, description FROM categories WHERE slug = ?');
         $statement->execute([$slug]);
+        $row = Row::first($statement);
 
-        /** @var Category|false $category */
-        $category = $statement->fetch();
-
-        return $category === false ? null : $category;
+        return $row === null ? null : Category::fromRow($row);
     }
 
     /**
      * Категории статьи, первой - основная.
      *
-     * @return list<CategoryLink>
+     * @return list<Category>
      */
     public function forPost(int $postId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT c.id, c.slug, c.name FROM categories c
+            'SELECT c.id, c.slug, c.name, c.description FROM categories c
              JOIN category_post cp ON cp.category_id = c.id
              WHERE cp.post_id = ?
              ORDER BY cp.position',
         );
         $statement->execute([$postId]);
 
-        /** @var list<CategoryLink> */
-        return $statement->fetchAll();
+        return array_map(Category::fromRow(...), Row::all($statement));
     }
 
     /**
@@ -95,21 +87,24 @@ final class CategoryRepository
         );
         $statement->execute($postIds);
 
-        // FETCH_GROUP раскладывает строки по первой колонке: [post_id => [название, ...]]
-        /** @var array<int, list<string>> */
-        return $statement->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN);
+        $names = [];
+        foreach (Row::all($statement) as $row) {
+            $names[$row->int('post_id')][] = $row->string('name');
+        }
+
+        return $names;
     }
 
     /**
-     * Категории со статьями и дата самой свежей из них - для lastmod в sitemap.
+     * Дата самой свежей статьи каждой категории, в которой есть статьи.
      * slug можно выбирать при GROUP BY c.id: он зависит от первичного ключа.
      *
-     * @return list<array{slug: string, updated_at: string}>
+     * @return array<string, DateTimeImmutable> slug категории => дата
      */
-    public function forSitemap(): array
+    public function lastPostDates(): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT c.slug, MAX(p.published_at) AS updated_at FROM categories c
+            'SELECT c.slug, MAX(p.published_at) AS published_at FROM categories c
              JOIN category_post cp ON cp.category_id = c.id
              JOIN posts p ON p.id = cp.post_id
              GROUP BY c.id
@@ -117,17 +112,20 @@ final class CategoryRepository
         );
         $statement->execute();
 
-        /** @var list<array{slug: string, updated_at: string}> */
-        return $statement->fetchAll();
+        $dates = [];
+        foreach (Row::all($statement) as $row) {
+            $dates[$row->string('slug')] = $row->date('published_at');
+        }
+
+        return $dates;
     }
 
     public function count(): int
     {
-        $statement = $this->pdo->prepare('SELECT COUNT(*) FROM categories');
+        $statement = $this->pdo->prepare('SELECT COUNT(*) AS total FROM categories');
         $statement->execute();
 
-        /** @var int */
-        return $statement->fetchColumn();
+        return Row::first($statement)?->int('total') ?? 0;
     }
 
     /**
@@ -138,8 +136,12 @@ final class CategoryRepository
         $statement = $this->pdo->prepare('SELECT slug, id FROM categories');
         $statement->execute();
 
-        /** @var array<string, int> */
-        return $statement->fetchAll(PDO::FETCH_KEY_PAIR);
+        $ids = [];
+        foreach (Row::all($statement) as $row) {
+            $ids[$row->string('slug')] = $row->int('id');
+        }
+
+        return $ids;
     }
 
     /**

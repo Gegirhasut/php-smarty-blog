@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Blog;
 
 use App\Blog\Sitemap;
+use DateTimeImmutable;
 use DOMDocument;
 use PHPUnit\Framework\TestCase;
 
@@ -13,10 +14,10 @@ final class SitemapTest extends TestCase
     public function testListsHomeCategoriesAndPosts(): void
     {
         $xml = (new Sitemap('https://blog.test'))->render(
-            [['slug' => 'tools', 'updated_at' => '2026-10-05 10:00:00']],
+            ['tools' => new DateTimeImmutable('2026-10-05 10:00:00')],
             [
-                ['slug' => 'new', 'published_at' => '2026-10-05 10:00:00'],
-                ['slug' => 'old', 'published_at' => '2026-09-01 08:30:00'],
+                'new' => new DateTimeImmutable('2026-10-05 10:00:00'),
+                'old' => new DateTimeImmutable('2026-09-01 08:30:00'),
             ],
         );
 

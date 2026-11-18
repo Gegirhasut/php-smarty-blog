@@ -7,15 +7,15 @@
             <header class="post__header">
                 <ul class="post__categories">
                     {foreach $postCategories as $item}
-                        <li><a class="post__category" href="/category/{$item.slug}">{$item.name}</a></li>
+                        <li><a class="post__category" href="/category/{$item->slug}">{$item->name}</a></li>
                     {/foreach}
                 </ul>
-                <h1 class="post__title">{$post.title}</h1>
+                <h1 class="post__title">{$post->title}</h1>
                 {include "partials/post-info.tpl" post=$post minutes=$readingMinutes}
-                <p class="post__lead">{$post.description}</p>
+                <p class="post__lead">{$post->description}</p>
             </header>
 
-            {include "partials/cover.tpl" class="post__image" src=$post.image alt=$post.title priority=true}
+            {include "partials/cover.tpl" class="post__image" src=$post->image alt=$post->title priority=true}
 
             {* Блоки из ArticleText: текст выводится с обычным экранированием, без сырого HTML *}
             <div class="post__content">
@@ -48,7 +48,7 @@
                 <h2 class="sidebar__title" id="categories-title">Категории</h2>
                 <ul class="sidebar__list">
                     {foreach $categories as $item}
-                        <li><a class="sidebar__link" href="/category/{$item.slug}">{$item.name}</a></li>
+                        <li><a class="sidebar__link" href="/category/{$item->slug}">{$item->name}</a></li>
                     {/foreach}
                 </ul>
             </section>

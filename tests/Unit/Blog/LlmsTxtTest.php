@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Blog;
 
+use App\Blog\Category;
 use App\Blog\LlmsTxt;
+use App\Blog\PostCard;
 use App\Core\Config;
+use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
 final class LlmsTxtTest extends TestCase
@@ -20,16 +23,8 @@ final class LlmsTxtTest extends TestCase
     public function testListsCategoriesWithTheirPosts(): void
     {
         $text = $this->llms->render([[
-            'category' => ['id' => 1, 'slug' => 'tools', 'name' => 'Инструменты', 'description' => 'Обзоры сервисов.'],
-            'posts' => [[
-                'id' => 7,
-                'slug' => 'first',
-                'title' => 'Первая',
-                'description' => 'О чём статья.',
-                'image' => '/uploads/first.webp',
-                'views' => 0,
-                'published_at' => '2026-10-01 10:00:00',
-            ]],
+            'category' => new Category(1, 'tools', 'Инструменты', 'Обзоры сервисов.'),
+            'posts' => [$this->post('first', 'Первая', 'О чём статья.')],
         ]]);
 
         self::assertSame(<<<'TEXT'
@@ -52,19 +47,16 @@ final class LlmsTxtTest extends TestCase
     public function testKeepsLinksIntact(): void
     {
         $text = $this->llms->render([[
-            'category' => ['id' => 1, 'slug' => 'tools', 'name' => 'Инструменты', 'description' => "Первая строка\nвторая."],
-            'posts' => [[
-                'id' => 7,
-                'slug' => 'first',
-                'title' => 'Обзор [бета] \ релиз',
-                'description' => 'Описание',
-                'image' => '/uploads/first.webp',
-                'views' => 0,
-                'published_at' => '2026-10-01 10:00:00',
-            ]],
+            'category' => new Category(1, 'tools', 'Инструменты', "Первая строка\nвторая."),
+            'posts' => [$this->post('first', 'Обзор [бета] \ релиз', 'Описание')],
         ]]);
 
         self::assertStringContainsString('): Первая строка вторая.', $text);
         self::assertStringContainsString('- [Обзор \[бета\] \\\\ релиз](https://blog.test/post/first): Описание', $text);
+    }
+
+    private function post(string $slug, string $title, string $description): PostCard
+    {
+        return new PostCard(7, $slug, $title, $description, "/uploads/{$slug}.webp", 0, new DateTimeImmutable('2026-10-01 10:00:00'));
     }
 }

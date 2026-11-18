@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Repository;
 
+use App\Blog\Category;
+use App\Blog\Post;
+use App\Blog\PostCard;
 use App\Blog\Sort;
 use App\Repository\PostRepository;
 use App\Tests\DatabaseTestCase;
+use DateTimeImmutable;
+use DateTimeZone;
 use PDO;
 
 final class PostRepositoryTest extends DatabaseTestCase
@@ -45,17 +50,17 @@ final class PostRepositoryTest extends DatabaseTestCase
         $tools = $this->insertCategory('tools', 'Инструменты', 'Обзоры сервисов.');
         $postId = $this->insertPost('first', [$tools], '2026-10-01 10:00:00', views: 42, title: 'Первая');
 
-        self::assertSame([[
-            'category' => ['id' => $tools, 'slug' => 'tools', 'name' => 'Инструменты', 'description' => 'Обзоры сервисов.'],
-            'posts' => [[
-                'id' => $postId,
-                'slug' => 'first',
-                'title' => 'Первая',
-                'description' => 'Описание статьи first.',
-                'image' => '/uploads/first.webp',
-                'views' => 42,
-                'published_at' => '2026-10-01 10:00:00',
-            ]],
+        self::assertEquals([[
+            'category' => new Category($tools, 'tools', 'Инструменты', 'Обзоры сервисов.'),
+            'posts' => [new PostCard(
+                id: $postId,
+                slug: 'first',
+                title: 'Первая',
+                description: 'Описание статьи first.',
+                image: '/uploads/first.webp',
+                views: 42,
+                publishedAt: new DateTimeImmutable('2026-10-01 10:00:00', new DateTimeZone('UTC')),
+            )],
         ]], $this->posts->latestByCategory(3));
     }
 
@@ -113,16 +118,16 @@ final class PostRepositoryTest extends DatabaseTestCase
         $tools = $this->insertCategory('tools');
         $id = $this->insertPost('first', [$tools], '2026-10-01 10:00:00', views: 5, title: 'Первая', content: "Текст.\n\n## Раздел");
 
-        self::assertSame([
-            'id' => $id,
-            'slug' => 'first',
-            'title' => 'Первая',
-            'description' => 'Описание статьи first.',
-            'image' => '/uploads/first.webp',
-            'views' => 5,
-            'published_at' => '2026-10-01 10:00:00',
-            'content' => "Текст.\n\n## Раздел",
-        ], $this->posts->findBySlug('first'));
+        self::assertEquals(new Post(
+            id: $id,
+            slug: 'first',
+            title: 'Первая',
+            description: 'Описание статьи first.',
+            image: '/uploads/first.webp',
+            views: 5,
+            publishedAt: new DateTimeImmutable('2026-10-01 10:00:00', new DateTimeZone('UTC')),
+            content: "Текст.\n\n## Раздел",
+        ), $this->posts->findBySlug('first'));
         self::assertNull($this->posts->findBySlug('First'));
         self::assertNull($this->posts->findBySlug('missing'));
         self::assertNull($this->posts->findBySlug('привет'));
@@ -176,16 +181,16 @@ final class PostRepositoryTest extends DatabaseTestCase
         self::assertSame(['new', 'middle'], array_column($this->posts->latest(2), 'slug'));
     }
 
-    public function testSitemapListsAllPostsNewestFirst(): void
+    public function testPublishedDatesOfAllPostsNewestFirst(): void
     {
         $tools = $this->insertCategory('tools');
         $this->insertPost('old', [$tools], '2026-09-01 10:00:00');
         $this->insertPost('new', [$tools], '2026-10-05 10:00:00');
 
-        self::assertSame([
-            ['slug' => 'new', 'published_at' => '2026-10-05 10:00:00'],
-            ['slug' => 'old', 'published_at' => '2026-09-01 10:00:00'],
-        ], $this->posts->forSitemap());
+        self::assertSame(
+            ['new' => '2026-10-05T10:00:00+00:00', 'old' => '2026-09-01T10:00:00+00:00'],
+            array_map(fn (DateTimeImmutable $date): string => $date->format(DATE_ATOM), $this->posts->publishedDates()),
+        );
     }
 
     public function testPostWithoutNeighboursHasNoSimilar(): void

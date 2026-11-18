@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
+use App\Blog\Category;
 use App\Core\Meta;
 use App\Core\View;
 use App\Tests\Html;
@@ -85,8 +86,8 @@ final class LayoutTest extends TestCase
     {
         $page = $this->render(new Meta(), [
             'categories' => [
-                ['id' => 1, 'slug' => 'tools', 'name' => 'Инструменты'],
-                ['id' => 2, 'slug' => 'agents', 'name' => 'Агенты'],
+                new Category(1, 'tools', 'Инструменты', 'Обзоры.'),
+                new Category(2, 'agents', 'Агенты', 'Об агентах.'),
             ],
             'currentCategory' => 'agents',
         ]);

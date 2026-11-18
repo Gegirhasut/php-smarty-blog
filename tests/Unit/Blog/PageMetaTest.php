@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Blog;
 
+use App\Blog\Category;
 use App\Blog\ListingQuery;
 use App\Blog\PageMeta;
+use App\Blog\Post;
 use App\Blog\Sort;
 use App\Core\Config;
 use App\Core\Meta;
+use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
 final class PageMetaTest extends TestCase
 {
-    private const CATEGORY = ['id' => 1, 'slug' => 'tools', 'name' => 'Инструменты', 'description' => 'Обзоры сервисов.'];
-
     private PageMeta $meta;
+    private Category $category;
 
     protected function setUp(): void
     {
         $this->meta = new PageMeta(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', debug: false));
+        $this->category = new Category(1, 'tools', 'Инструменты', 'Обзоры сервисов.');
     }
 
     public function testHome(): void
@@ -41,7 +44,7 @@ final class PageMetaTest extends TestCase
 
     public function testCategory(): void
     {
-        $meta = $this->meta->category(self::CATEGORY, new ListingQuery());
+        $meta = $this->meta->category($this->category, new ListingQuery());
 
         self::assertSame('Инструменты', $meta->title);
         self::assertSame('Обзоры сервисов.', $meta->description);
@@ -69,7 +72,7 @@ final class PageMetaTest extends TestCase
 
     public function testCategoryPageNumberGoesToTitleAndCanonical(): void
     {
-        $meta = $this->meta->category(self::CATEGORY, new ListingQuery(page: 2));
+        $meta = $this->meta->category($this->category, new ListingQuery(page: 2));
 
         self::assertSame('Инструменты, страница 2', $meta->title);
         self::assertSame('/category/tools?page=2', $meta->canonical);
@@ -79,7 +82,7 @@ final class PageMetaTest extends TestCase
 
     public function testCategorySortedByViewsIsNotIndexed(): void
     {
-        $meta = $this->meta->category(self::CATEGORY, new ListingQuery(Sort::Views, 2));
+        $meta = $this->meta->category($this->category, new ListingQuery(Sort::Views, 2));
 
         self::assertSame('noindex, follow', $meta->robots);
         self::assertSame('/category/tools?sort=views&page=2', $meta->canonical);
@@ -87,16 +90,17 @@ final class PageMetaTest extends TestCase
 
     public function testPost(): void
     {
-        $post = [
-            'id' => 7,
-            'slug' => 'first',
-            'title' => 'Первая статья',
-            'description' => 'О чём статья.',
-            'image' => '/uploads/first.webp',
-            'views' => 10,
-            'published_at' => '2026-10-09 16:33:00',
-        ];
-        $categories = [['id' => 1, 'slug' => 'tools', 'name' => 'Инструменты'], ['id' => 2, 'slug' => 'money', 'name' => 'Деньги']];
+        $post = new Post(
+            id: 7,
+            slug: 'first',
+            title: 'Первая статья',
+            description: 'О чём статья.',
+            image: '/uploads/first.webp',
+            views: 10,
+            publishedAt: new DateTimeImmutable('2026-10-09 16:33:00'),
+            content: 'Текст.',
+        );
+        $categories = [$this->category, new Category(2, 'money', 'Деньги', 'О деньгах.')];
 
         $meta = $this->meta->post($post, $categories);
 

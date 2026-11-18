@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Core;
 
 use App\Core\View;
 use App\Tests\TempDir;
+use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
 final class ViewTest extends TestCase
@@ -49,7 +50,10 @@ final class ViewTest extends TestCase
     {
         self::assertSame(
             '7 мая 2026, 31 дек 2025',
-            $this->view->render('string:{$a|date_ru}, {$b|date_ru}', ['a' => '2026-05-07 09:00:00', 'b' => '2025-12-31 23:59:59']),
+            $this->view->render('string:{$a|date_ru}, {$b|date_ru}', [
+                'a' => new DateTimeImmutable('2026-05-07 09:00:00'),
+                'b' => new DateTimeImmutable('2025-12-31 23:59:59'),
+            ]),
         );
     }
 }

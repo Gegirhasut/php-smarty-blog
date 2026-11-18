@@ -41,7 +41,7 @@
                 <ul class="nav__list">
                     {foreach $categories as $item}
                         <li class="nav__item">
-                            <a class="nav__link" href="/category/{$item.slug}"{if $item.slug === $currentCategory} aria-current="page"{/if}>{$item.name}</a>
+                            <a class="nav__link" href="/category/{$item->slug}"{if $item->slug === $currentCategory} aria-current="page"{/if}>{$item->name}</a>
                         </li>
                     {/foreach}
                 </ul>

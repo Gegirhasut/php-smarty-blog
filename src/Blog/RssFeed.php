@@ -5,14 +5,10 @@ declare(strict_types=1);
 namespace App\Blog;
 
 use App\Core\Config;
-use App\Repository\PostRepository;
-use DateTimeImmutable;
 use XMLWriter;
 
 /**
  * RSS 2.0 со свежими статьями. XML собирает XMLWriter, он же экранирует текст.
- *
- * @phpstan-import-type PostCard from PostRepository
  */
 final class RssFeed
 {
@@ -49,17 +45,17 @@ final class RssFeed
         $xml->endElement();
 
         foreach ($posts as $post) {
-            $link = $siteUrl . '/post/' . $post['slug'];
+            $link = $siteUrl . '/post/' . $post->slug;
             $xml->startElement('item');
-            $xml->writeElement('title', $post['title']);
+            $xml->writeElement('title', $post->title);
             $xml->writeElement('link', $link);
             $xml->startElement('guid');
             $xml->writeAttribute('isPermaLink', 'true');
             $xml->text($link);
             $xml->endElement();
-            $xml->writeElement('pubDate', (new DateTimeImmutable($post['published_at']))->format(DATE_RSS));
-            $xml->writeElement('description', $post['description']);
-            foreach ($categories[$post['id']] ?? [] as $category) {
+            $xml->writeElement('pubDate', $post->publishedAt->format(DATE_RSS));
+            $xml->writeElement('description', $post->description);
+            foreach ($categories[$post->id] ?? [] as $category) {
                 $xml->writeElement('category', $category);
             }
             $xml->endElement();

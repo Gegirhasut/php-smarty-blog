@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Blog;
 
+use App\Blog\PostCard;
 use App\Blog\RssFeed;
 use App\Core\Config;
+use DateTimeImmutable;
 use DOMDocument;
 use DOMXPath;
 use PHPUnit\Framework\TestCase;
@@ -49,20 +51,9 @@ final class RssFeedTest extends TestCase
         self::assertSame([], $this->values($rss, '//item[2]/category'));
     }
 
-    /**
-     * @return array{id: int, slug: string, title: string, description: string, image: string, views: int, published_at: string}
-     */
-    private function post(int $id, string $slug, string $title, string $publishedAt): array
+    private function post(int $id, string $slug, string $title, string $publishedAt): PostCard
     {
-        return [
-            'id' => $id,
-            'slug' => $slug,
-            'title' => $title,
-            'description' => "Описание статьи {$slug}.",
-            'image' => "/uploads/{$slug}.webp",
-            'views' => 0,
-            'published_at' => $publishedAt,
-        ];
+        return new PostCard($id, $slug, $title, "Описание статьи {$slug}.", "/uploads/{$slug}.webp", 0, new DateTimeImmutable($publishedAt));
     }
 
     private function parse(string $xml): DOMXPath

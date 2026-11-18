@@ -4,34 +4,20 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Blog\Category;
+use App\Blog\Post;
+use App\Blog\PostCard;
 use App\Blog\Slug;
 use App\Blog\Sort;
+use App\Database\Row;
+use DateTimeImmutable;
 use PDO;
 
-/**
- * @phpstan-import-type Category from CategoryRepository
- * @phpstan-type PostCard array{
- *     id: int,
- *     slug: string,
- *     title: string,
- *     description: string,
- *     image: string,
- *     views: int,
- *     published_at: string
- * }
- * @phpstan-type Post array{
- *     id: int,
- *     slug: string,
- *     title: string,
- *     description: string,
- *     image: string,
- *     views: int,
- *     published_at: string,
- *     content: string
- * }
- */
 final class PostRepository
 {
+    // Колонки для PostCard: в списках текст статьи не нужен
+    private const CARD_COLUMNS = 'p.id, p.slug, p.title, p.description, p.image, p.views, p.published_at';
+
     public function __construct(private readonly PDO $pdo)
     {
     }
@@ -46,59 +32,32 @@ final class PostRepository
     public function latestByCategory(int $perCategory): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT category_id, category_slug, category_name, category_description,
-                    id, slug, title, description, image, views, published_at
-             FROM (
+            'SELECT * FROM (
                  SELECT c.id AS category_id, c.slug AS category_slug, c.name AS category_name,
-                        c.description AS category_description,
-                        p.id, p.slug, p.title, p.description, p.image, p.views, p.published_at,
-                        ROW_NUMBER() OVER (PARTITION BY c.id ORDER BY p.published_at DESC, p.id DESC) AS position
+                        c.description AS category_description, ' . self::CARD_COLUMNS . ',
+                        ROW_NUMBER() OVER (PARTITION BY c.id ORDER BY p.published_at DESC, p.id DESC) AS place
                  FROM categories c
                  JOIN category_post cp ON cp.category_id = c.id
                  JOIN posts p ON p.id = cp.post_id
              ) ranked
-             WHERE position <= ?
-             ORDER BY category_id, position',
+             WHERE place <= ?
+             ORDER BY category_id, place',
         );
         $statement->execute([$perCategory]);
 
-        /**
-         * @var list<array{
-         *     category_id: int,
-         *     category_slug: string,
-         *     category_name: string,
-         *     category_description: string,
-         *     id: int,
-         *     slug: string,
-         *     title: string,
-         *     description: string,
-         *     image: string,
-         *     views: int,
-         *     published_at: string
-         * }> $rows
-         */
-        $rows = $statement->fetchAll();
-
         $sections = [];
-        foreach ($rows as $row) {
-            $sections[$row['category_id']] ??= [
-                'category' => [
-                    'id' => $row['category_id'],
-                    'slug' => $row['category_slug'],
-                    'name' => $row['category_name'],
-                    'description' => $row['category_description'],
-                ],
+        foreach (Row::all($statement) as $row) {
+            $categoryId = $row->int('category_id');
+            $sections[$categoryId] ??= [
+                'category' => new Category(
+                    $categoryId,
+                    $row->string('category_slug'),
+                    $row->string('category_name'),
+                    $row->string('category_description'),
+                ),
                 'posts' => [],
             ];
-            $sections[$row['category_id']]['posts'][] = [
-                'id' => $row['id'],
-                'slug' => $row['slug'],
-                'title' => $row['title'],
-                'description' => $row['description'],
-                'image' => $row['image'],
-                'views' => $row['views'],
-                'published_at' => $row['published_at'],
-            ];
+            $sections[$categoryId]['posts'][] = PostCard::fromRow($row);
         }
 
         return array_values($sections);
@@ -106,11 +65,10 @@ final class PostRepository
 
     public function countInCategory(int $categoryId): int
     {
-        $statement = $this->pdo->prepare('SELECT COUNT(*) FROM category_post WHERE category_id = ?');
+        $statement = $this->pdo->prepare('SELECT COUNT(*) AS total FROM category_post WHERE category_id = ?');
         $statement->execute([$categoryId]);
 
-        /** @var int */
-        return $statement->fetchColumn();
+        return Row::first($statement)?->int('total') ?? 0;
     }
 
     /**
@@ -128,8 +86,7 @@ final class PostRepository
         };
 
         $statement = $this->pdo->prepare(
-            "SELECT p.id, p.slug, p.title, p.description, p.image, p.views, p.published_at
-             FROM posts p
+            'SELECT ' . self::CARD_COLUMNS . " FROM posts p
              JOIN category_post cp ON cp.post_id = p.id
              WHERE cp.category_id = ?
              ORDER BY {$order}
@@ -137,14 +94,10 @@ final class PostRepository
         );
         $statement->execute([$categoryId, $limit, $offset]);
 
-        /** @var list<PostCard> */
-        return $statement->fetchAll();
+        return array_map(PostCard::fromRow(...), Row::all($statement));
     }
 
-    /**
-     * @return Post|null
-     */
-    public function findBySlug(string $slug): ?array
+    public function findBySlug(string $slug): ?Post
     {
         // Строка не в формате slug не может быть в базе, а запрос с ней MySQL отклонил бы с ошибкой
         if (!Slug::isValid($slug)) {
@@ -155,11 +108,9 @@ final class PostRepository
             'SELECT id, slug, title, description, image, views, published_at, content FROM posts WHERE slug = ?',
         );
         $statement->execute([$slug]);
+        $row = Row::first($statement);
 
-        /** @var Post|false $post */
-        $post = $statement->fetch();
-
-        return $post === false ? null : $post;
+        return $row === null ? null : Post::fromRow($row);
     }
 
     /**
@@ -180,8 +131,7 @@ final class PostRepository
         // own - категории статьи, other - другие статьи этих категорий; COUNT(*) в группе - число общих категорий.
         // Остальные поля p можно выбирать при GROUP BY p.id: они зависят от первичного ключа
         $statement = $this->pdo->prepare(
-            'SELECT p.id, p.slug, p.title, p.description, p.image, p.views, p.published_at
-             FROM category_post own
+            'SELECT ' . self::CARD_COLUMNS . ' FROM category_post own
              JOIN category_post other ON other.category_id = own.category_id AND other.post_id <> own.post_id
              JOIN posts p ON p.id = other.post_id
              WHERE own.post_id = ?
@@ -191,8 +141,7 @@ final class PostRepository
         );
         $statement->execute([$postId, $limit]);
 
-        /** @var list<PostCard> */
-        return $statement->fetchAll();
+        return array_map(PostCard::fromRow(...), Row::all($statement));
     }
 
     /**
@@ -201,29 +150,32 @@ final class PostRepository
     public function latest(int $limit): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT id, slug, title, description, image, views, published_at FROM posts
-             ORDER BY published_at DESC, id DESC
+            'SELECT ' . self::CARD_COLUMNS . ' FROM posts p
+             ORDER BY p.published_at DESC, p.id DESC
              LIMIT ?',
         );
         $statement->execute([$limit]);
 
-        /** @var list<PostCard> */
-        return $statement->fetchAll();
+        return array_map(PostCard::fromRow(...), Row::all($statement));
     }
 
     /**
-     * Все статьи для sitemap, от новых к старым. В один файл sitemap помещается 50 000 адресов:
+     * Даты публикации всех статей, от новых к старым. В один файл sitemap помещается 50 000 адресов:
      * блогу до этого далеко, а больше понадобился бы индекс из нескольких файлов.
      *
-     * @return list<array{slug: string, published_at: string}>
+     * @return array<string, DateTimeImmutable> slug статьи => дата
      */
-    public function forSitemap(): array
+    public function publishedDates(): array
     {
         $statement = $this->pdo->prepare('SELECT slug, published_at FROM posts ORDER BY published_at DESC, id DESC');
         $statement->execute();
 
-        /** @var list<array{slug: string, published_at: string}> */
-        return $statement->fetchAll();
+        $dates = [];
+        foreach (Row::all($statement) as $row) {
+            $dates[$row->string('slug')] = $row->date('published_at');
+        }
+
+        return $dates;
     }
 
     /**
@@ -234,8 +186,12 @@ final class PostRepository
         $statement = $this->pdo->prepare('SELECT slug, id FROM posts');
         $statement->execute();
 
-        /** @var array<string, int> */
-        return $statement->fetchAll(PDO::FETCH_KEY_PAIR);
+        $ids = [];
+        foreach (Row::all($statement) as $row) {
+            $ids[$row->string('slug')] = $row->int('id');
+        }
+
+        return $ids;
     }
 
     /**

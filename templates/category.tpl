@@ -2,8 +2,8 @@
 
 {block "content"}
     <header class="page-header">
-        <h1 class="page-header__title">{$category.name}</h1>
-        <p class="page-header__description">{$category.description}</p>
+        <h1 class="page-header__title">{$category->name}</h1>
+        <p class="page-header__description">{$category->description}</p>
         <nav class="sort" aria-label="Сортировка статей">
             {foreach $sorts as $sort}
                 <a class="sort__link" href="{$sort.url}"{if $sort.current} aria-current="true"{/if}>{$sort.label}</a>

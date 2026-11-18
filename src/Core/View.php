@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core;
 
-use DateTimeImmutable;
+use DateTimeInterface;
 use Smarty\Smarty;
 
 final class View
@@ -42,10 +42,8 @@ final class View
     /**
      * «17 ноя 2026»: у date() и date_format нет русских названий месяцев.
      */
-    private function formatDate(string $date): string
+    private function formatDate(DateTimeInterface $date): string
     {
-        $time = new DateTimeImmutable($date);
-
-        return $time->format('j ') . self::MONTHS[(int) $time->format('n') - 1] . $time->format(' Y');
+        return $date->format('j ') . self::MONTHS[(int) $date->format('n') - 1] . $date->format(' Y');
     }
 }

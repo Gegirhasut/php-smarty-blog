@@ -6,16 +6,9 @@ namespace App\Blog;
 
 use App\Core\Config;
 use App\Core\Meta;
-use App\Repository\CategoryRepository;
-use App\Repository\PostRepository;
-use DateTimeImmutable;
 
 /**
  * Заголовок, описание, canonical, хлебные крошки и JSON-LD для каждой страницы блога.
- *
- * @phpstan-import-type Category from CategoryRepository
- * @phpstan-import-type CategoryLink from CategoryRepository
- * @phpstan-import-type PostCard from PostRepository
  */
 final class PageMeta
 {
@@ -44,18 +37,15 @@ final class PageMeta
         );
     }
 
-    /**
-     * @param Category $category
-     */
-    public function category(array $category, ListingQuery $query): Meta
+    public function category(Category $category, ListingQuery $query): Meta
     {
-        $path = '/category/' . $category['slug'];
+        $path = '/category/' . $category->slug;
         $canonical = $query->url($path);
-        $breadcrumbs = [self::HOME, ['name' => $category['name'], 'url' => $path]];
+        $breadcrumbs = [self::HOME, ['name' => $category->name, 'url' => $path]];
 
         return new Meta(
-            title: $query->page > 1 ? "{$category['name']}, страница {$query->page}" : $category['name'],
-            description: $category['description'],
+            title: $query->page > 1 ? "{$category->name}, страница {$query->page}" : $category->name,
+            description: $category->description,
             canonical: $canonical,
             // Список по просмотрам - те же статьи в другом порядке: индексировать в нём нечего, а ссылки на статьи
             // пусть обходятся. canonical на список по дате не подходит: на одной и той же странице у них разные статьи
@@ -65,8 +55,8 @@ final class PageMeta
             schema: [
                 [
                     '@type' => 'CollectionPage',
-                    'name' => $category['name'],
-                    'description' => $category['description'],
+                    'name' => $category->name,
+                    'description' => $category->description,
                     'url' => $this->url($canonical),
                 ],
                 $this->breadcrumbList($breadcrumbs),
@@ -75,37 +65,36 @@ final class PageMeta
     }
 
     /**
-     * @param PostCard $post
-     * @param list<CategoryLink> $categories категории статьи, первая - основная: она попадает в хлебные крошки
+     * @param list<Category> $categories категории статьи, первая - основная: она попадает в хлебные крошки
      */
-    public function post(array $post, array $categories): Meta
+    public function post(Post $post, array $categories): Meta
     {
-        $path = '/post/' . $post['slug'];
+        $path = '/post/' . $post->slug;
         $breadcrumbs = [self::HOME];
         if ($categories !== []) {
-            $breadcrumbs[] = ['name' => $categories[0]['name'], 'url' => '/category/' . $categories[0]['slug']];
+            $breadcrumbs[] = ['name' => $categories[0]->name, 'url' => '/category/' . $categories[0]->slug];
         }
-        $breadcrumbs[] = ['name' => $post['title'], 'url' => $path];
+        $breadcrumbs[] = ['name' => $post->title, 'url' => $path];
         // Авторов в блоге нет, статьи выпускает сам блог
         $publisher = ['@type' => 'Organization', 'name' => $this->config->siteName, 'url' => $this->url('/')];
 
         return new Meta(
-            title: $post['title'],
-            description: $post['description'],
+            title: $post->title,
+            description: $post->description,
             canonical: $path,
             ogType: 'article',
-            image: $post['image'],
+            image: $post->image,
             breadcrumbs: $breadcrumbs,
             schema: [
                 [
                     '@type' => 'BlogPosting',
-                    'headline' => $post['title'],
-                    'description' => $post['description'],
-                    'image' => $this->url($post['image']),
-                    'datePublished' => (new DateTimeImmutable($post['published_at']))->format(DATE_ATOM),
+                    'headline' => $post->title,
+                    'description' => $post->description,
+                    'image' => $this->url($post->image),
+                    'datePublished' => $post->publishedAt->format(DATE_ATOM),
                     'url' => $this->url($path),
                     'mainEntityOfPage' => $this->url($path),
-                    'articleSection' => array_column($categories, 'name'),
+                    'articleSection' => array_map(fn (Category $category): string => $category->name, $categories),
                     'author' => $publisher,
                     'publisher' => $publisher,
                 ],

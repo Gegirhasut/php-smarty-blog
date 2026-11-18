@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Repository;
 
+use App\Blog\Category;
 use App\Repository\CategoryRepository;
 use App\Tests\DatabaseTestCase;
+use DateTimeImmutable;
 
 final class CategoryRepositoryTest extends DatabaseTestCase
 {
@@ -27,9 +29,9 @@ final class CategoryRepositoryTest extends DatabaseTestCase
         $this->insertPost('first', [$agents]);
         $this->insertPost('second', [$agents, $tools]);
 
-        self::assertSame([
-            ['id' => $tools, 'slug' => 'tools', 'name' => 'Инструменты'],
-            ['id' => $agents, 'slug' => 'agents', 'name' => 'Агенты'],
+        self::assertEquals([
+            new Category($tools, 'tools', 'Инструменты', 'Описание категории tools.'),
+            new Category($agents, 'agents', 'Агенты', 'Описание категории agents.'),
         ], $this->categories->withPosts());
     }
 
@@ -37,10 +39,7 @@ final class CategoryRepositoryTest extends DatabaseTestCase
     {
         $id = $this->insertCategory('tools', 'Инструменты', 'Обзоры сервисов.');
 
-        self::assertSame(
-            ['id' => $id, 'slug' => 'tools', 'name' => 'Инструменты', 'description' => 'Обзоры сервисов.'],
-            $this->categories->findBySlug('tools'),
-        );
+        self::assertEquals(new Category($id, 'tools', 'Инструменты', 'Обзоры сервисов.'), $this->categories->findBySlug('tools'));
         self::assertNull($this->categories->findBySlug('Tools'));
         self::assertNull($this->categories->findBySlug('missing'));
         // Без проверки формата MySQL ответил бы ошибкой: колонка slug в ascii
@@ -63,7 +62,7 @@ final class CategoryRepositoryTest extends DatabaseTestCase
         self::assertSame([], $this->categories->namesByPost([]));
     }
 
-    public function testSitemapDatesAreNewestPostOfCategory(): void
+    public function testLastPostDateOfEachCategory(): void
     {
         $tools = $this->insertCategory('tools');
         $this->insertCategory('empty');
@@ -71,10 +70,10 @@ final class CategoryRepositoryTest extends DatabaseTestCase
         $this->insertPost('old', [$tools, $agents], '2026-09-01 10:00:00');
         $this->insertPost('new', [$tools], '2026-10-05 10:00:00');
 
-        self::assertSame([
-            ['slug' => 'tools', 'updated_at' => '2026-10-05 10:00:00'],
-            ['slug' => 'agents', 'updated_at' => '2026-09-01 10:00:00'],
-        ], $this->categories->forSitemap());
+        self::assertSame(
+            ['tools' => '2026-10-05T10:00:00+00:00', 'agents' => '2026-09-01T10:00:00+00:00'],
+            array_map(fn (DateTimeImmutable $date): string => $date->format(DATE_ATOM), $this->categories->lastPostDates()),
+        );
     }
 
     public function testListsCategoriesOfPostMainFirst(): void
@@ -85,9 +84,6 @@ final class CategoryRepositoryTest extends DatabaseTestCase
         // Основная категория создана позже другой, и порядок по id поставил бы её второй
         $post = $this->insertPost('post', [$agents, $tools]);
 
-        self::assertSame([
-            ['id' => $agents, 'slug' => 'agents', 'name' => 'Агенты'],
-            ['id' => $tools, 'slug' => 'tools', 'name' => 'Инструменты'],
-        ], $this->categories->forPost($post));
+        self::assertSame(['agents', 'tools'], array_column($this->categories->forPost($post), 'slug'));
     }
 }

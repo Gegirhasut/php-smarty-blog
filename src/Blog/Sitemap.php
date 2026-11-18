@@ -18,8 +18,8 @@ final class Sitemap
     }
 
     /**
-     * @param list<array{slug: string, updated_at: string}> $categories
-     * @param list<array{slug: string, published_at: string}> $posts от новых к старым
+     * @param array<string, DateTimeImmutable> $categories slug категории => дата её самой свежей статьи
+     * @param array<string, DateTimeImmutable> $posts slug статьи => дата публикации, от новых к старым
      */
     public function render(array $categories, array $posts): string
     {
@@ -31,12 +31,12 @@ final class Sitemap
         $xml->writeAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9');
 
         // Главная меняется вместе с самой свежей статьёй
-        $this->url($xml, '/', $posts[0]['published_at'] ?? null);
-        foreach ($categories as $category) {
-            $this->url($xml, '/category/' . $category['slug'], $category['updated_at']);
+        $this->url($xml, '/', $posts === [] ? null : reset($posts));
+        foreach ($categories as $slug => $updatedAt) {
+            $this->url($xml, '/category/' . $slug, $updatedAt);
         }
-        foreach ($posts as $post) {
-            $this->url($xml, '/post/' . $post['slug'], $post['published_at']);
+        foreach ($posts as $slug => $publishedAt) {
+            $this->url($xml, '/post/' . $slug, $publishedAt);
         }
 
         $xml->endElement();
@@ -45,12 +45,12 @@ final class Sitemap
         return $xml->outputMemory();
     }
 
-    private function url(XMLWriter $xml, string $path, ?string $updatedAt): void
+    private function url(XMLWriter $xml, string $path, ?DateTimeImmutable $updatedAt): void
     {
         $xml->startElement('url');
         $xml->writeElement('loc', $this->siteUrl . $path);
         if ($updatedAt !== null) {
-            $xml->writeElement('lastmod', (new DateTimeImmutable($updatedAt))->format(DATE_ATOM));
+            $xml->writeElement('lastmod', $updatedAt->format(DATE_ATOM));
         }
         $xml->endElement();
     }
