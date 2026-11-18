@@ -8,6 +8,7 @@ use PDO;
 
 /**
  * @phpstan-type CategoryLink array{id: int, slug: string, name: string}
+ * @phpstan-type Category array{id: int, slug: string, name: string, description: string}
  */
 final class CategoryRepository
 {

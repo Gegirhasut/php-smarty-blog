@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Blog\PageMeta;
 use App\Controller\HomeController;
 use App\Repository\CategoryRepository;
+use App\Repository\PostRepository;
 use Closure;
 use PDO;
 use Throwable;
@@ -30,11 +32,17 @@ final class App
             debug: $config->debug,
         );
         $this->view->share('site', ['name' => $config->siteName, 'url' => $config->siteUrl]);
+        $meta = new PageMeta($config->siteName, $config->siteUrl);
 
         // Контроллер и его репозитории создаются только для совпавшего маршрута,
         // поэтому на 404 и 405 соединение с БД не открывается
         $this->router = new Router();
-        $this->router->add('/', fn (): Response => (new HomeController($this->view, $this->categories()))->index());
+        $this->router->add('/', fn (): Response => (new HomeController(
+            $this->view,
+            $meta,
+            $this->categories(),
+            $this->posts(),
+        ))->index());
     }
 
     public function handle(Request $request): Response
@@ -72,6 +80,11 @@ final class App
     private function categories(): CategoryRepository
     {
         return new CategoryRepository($this->pdo());
+    }
+
+    private function posts(): PostRepository
+    {
+        return new PostRepository($this->pdo());
     }
 
     private function pdo(): PDO

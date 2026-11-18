@@ -44,4 +44,12 @@ final class ViewTest extends TestCase
 
         self::assertSame('none', $this->view->render('string:{$value|default:"none"}'));
     }
+
+    public function testFormatsDateInRussian(): void
+    {
+        self::assertSame(
+            '7 мая 2026, 31 дек 2025',
+            $this->view->render('string:{$a|date_ru}, {$b|date_ru}', ['a' => '2026-05-07 09:00:00', 'b' => '2025-12-31 23:59:59']),
+        );
+    }
 }
