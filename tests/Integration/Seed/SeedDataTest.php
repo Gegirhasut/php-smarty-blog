@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Integration\Database;
+namespace App\Tests\Integration\Seed;
 
-use App\Database\Seeder;
+use App\Seed\Seeder;
 use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
 use App\Tests\DatabaseTestCase;

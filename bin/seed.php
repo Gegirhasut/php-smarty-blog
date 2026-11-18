@@ -5,9 +5,9 @@ declare(strict_types=1);
 
 use App\Database\Connection;
 use App\Database\Schema;
-use App\Database\Seeder;
 use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
+use App\Seed\Seeder;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Database;
+namespace App\Seed;
 
 use App\Blog\Slug;
 use App\Repository\CategoryRepository;
