@@ -13,14 +13,22 @@ final class View
 
     private readonly Smarty $smarty;
 
-    public function __construct(string $templateDir, string $compileDir, bool $debug)
-    {
+    /**
+     * @param string $publicDir корень сайта: модификатор asset берёт оттуда время изменения файла
+     */
+    public function __construct(
+        string $templateDir,
+        string $compileDir,
+        private readonly string $publicDir,
+        bool $debug,
+    ) {
         $this->smarty = new Smarty();
         $this->smarty->setTemplateDir($templateDir);
         $this->smarty->setCompileDir($compileDir);
         $this->smarty->setEscapeHtml(true);
         $this->smarty->setCompileCheck($debug ? Smarty::COMPILECHECK_ON : Smarty::COMPILECHECK_OFF);
         $this->smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'date_ru', $this->formatDate(...));
+        $this->smarty->registerPlugin(Smarty::PLUGIN_MODIFIER, 'asset', $this->assetUrl(...));
     }
 
     public function share(string $name, mixed $value): void
@@ -45,5 +53,17 @@ final class View
     private function formatDate(DateTimeInterface $date): string
     {
         return $date->format('j ') . self::MONTHS[(int) $date->format('n') - 1] . $date->format(' Y');
+    }
+
+    /**
+     * «/assets/css/app.css?v=1763400000»: у изменённого файла новый адрес, поэтому статике можно отдавать
+     * кэш на год. Файла нет (CSS ещё не собран) - адрес без версии, страница всё равно откроется.
+     */
+    private function assetUrl(string $path): string
+    {
+        $file = $this->publicDir . $path;
+        $time = is_file($file) ? filemtime($file) : false;
+
+        return $time === false ? $path : $path . '?v=' . $time;
     }
 }

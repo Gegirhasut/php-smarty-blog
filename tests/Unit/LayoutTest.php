@@ -21,7 +21,8 @@ final class LayoutTest extends TestCase
     public static function setUpBeforeClass(): void
     {
         self::$compiled = new TempDir();
-        self::$view = new View(dirname(__DIR__, 2) . '/templates', self::$compiled->path, debug: true);
+        $root = dirname(__DIR__, 2);
+        self::$view = new View($root . '/templates', self::$compiled->path, $root . '/public', debug: true);
         self::$view->share('site', ['name' => 'Блог', 'description' => 'Блог об ИИ.']);
         self::$view->share('urls', new Urls('https://blog.test'));
     }

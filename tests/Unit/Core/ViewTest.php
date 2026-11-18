@@ -17,7 +17,12 @@ final class ViewTest extends TestCase
     protected function setUp(): void
     {
         $this->dir = new TempDir();
-        $this->view = new View(templateDir: $this->dir->path, compileDir: $this->dir->path, debug: true);
+        $this->view = new View(
+            templateDir: $this->dir->path,
+            compileDir: $this->dir->path,
+            publicDir: $this->dir->path,
+            debug: true,
+        );
     }
 
     protected function tearDown(): void
@@ -55,5 +60,18 @@ final class ViewTest extends TestCase
                 'b' => new DateTimeImmutable('2025-12-31 23:59:59'),
             ]),
         );
+    }
+
+    public function testAssetUrlCarriesModificationTime(): void
+    {
+        file_put_contents($this->dir->path . '/app.css', 'body{}');
+        touch($this->dir->path . '/app.css', 1763400000);
+
+        self::assertSame('/app.css?v=1763400000', $this->view->render('string:{"/app.css"|asset}'));
+    }
+
+    public function testAssetUrlWithoutFileHasNoVersion(): void
+    {
+        self::assertSame('/missing.css', $this->view->render('string:{"/missing.css"|asset}'));
     }
 }

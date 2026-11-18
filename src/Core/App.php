@@ -41,6 +41,7 @@ final class App
         $this->view = new View(
             templateDir: $rootDir . '/templates',
             compileDir: $rootDir . '/var/templates_c',
+            publicDir: $rootDir . '/public',
             debug: $config->debug,
         );
         $this->urls = new Urls($config->siteUrl);
