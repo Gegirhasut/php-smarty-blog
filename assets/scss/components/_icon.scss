@@ -1,0 +1,35 @@
+// Иконка из partials/icon.tpl: размер от шрифта вокруг, цвет - цвет текста
+.icon {
+    flex: none;
+    width: 1.25em;
+    height: 1.25em;
+}
+
+// Плашка с иконкой категории: на главной, в заголовке категории и в сайдбаре
+.icon-tile {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    color: var(--color-primary);
+    background: var(--color-primary-soft);
+    border-radius: var(--radius);
+
+    .icon {
+        width: 50%;
+        height: 50%;
+    }
+
+    &--lg {
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+    }
+
+    &--sm {
+        width: 32px;
+        height: 32px;
+        border-radius: var(--radius-sm);
+    }
+}

@@ -1,0 +1,67 @@
+.button {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 22px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+
+    .icon {
+        width: 18px;
+        height: 18px;
+        transition: transform 0.2s;
+    }
+
+    &:hover .icon {
+        transform: translateX(3px);
+    }
+
+    // Главная кнопка экрана: коралловая
+    &--accent {
+        color: #fff;
+        background: var(--color-accent-strong);
+        box-shadow: 0 8px 20px rgb(207 68 40 / 25%);
+
+        &:hover {
+            background: var(--color-accent-strong-hover);
+        }
+    }
+
+    &--primary {
+        color: #fff;
+        background: var(--color-primary);
+
+        &:hover {
+            background: var(--color-primary-hover);
+        }
+    }
+
+    // Второстепенная: светлая, с рамкой
+    &--light {
+        color: var(--color-primary);
+        background: var(--color-surface);
+        border-color: var(--color-primary-line);
+
+        &:hover {
+            background: var(--color-primary-soft);
+        }
+    }
+
+    &--small {
+        min-height: 36px;
+        padding: 6px 14px;
+        font-size: 0.875rem;
+        border-radius: var(--radius-pill);
+
+        .icon {
+            width: 16px;
+            height: 16px;
+        }
+    }
+}

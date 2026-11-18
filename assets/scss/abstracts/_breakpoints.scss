@@ -2,13 +2,27 @@
 
 // Стили пишутся от телефона, брейкпоинты только добавляют колонки и отступы
 $breakpoints: (
-    sm: 640px,  // две колонки карточек, баннер шире
-    md: 1024px, // три колонки, меню в шапке, статья с сайдбаром
-    lg: 1280px, // крупнее отступы и заголовки
+    sm: 640px,  // две колонки карточек
+    md: 1024px, // три колонки, меню в шапке, баннер с картинкой фоном, статья с сайдбаром
+    lg: 1280px, // крупнее отступы
 );
 
 @mixin from($name) {
-    @media (min-width: map.get($breakpoints, $name)) {
+    @media (width >= #{map.get($breakpoints, $name)}) {
+        @content;
+    }
+}
+
+// Только для экранов уже брейкпоинта - когда на телефоне что-то нужно убрать
+@mixin until($name) {
+    @media (width < #{map.get($breakpoints, $name)}) {
+        @content;
+    }
+}
+
+// Только между двумя брейкпоинтами
+@mixin between($from, $to) {
+    @media (#{map.get($breakpoints, $from)} <= width < #{map.get($breakpoints, $to)}) {
         @content;
     }
 }

@@ -38,23 +38,36 @@
     {/if}
 </head>
 <body>
+    <a class="skip-link" href="#main">Перейти к содержимому</a>
+
     <header class="header">
-        <a class="header__logo" href="{$urls->home()}">{$site.name}</a>
-        {* Меню строится из базы, поэтому его нет на странице 404: там соединение не открывается *}
-        {if $categories}
-            <nav class="header__nav nav" aria-label="Категории">
-                <ul class="nav__list">
-                    {foreach $categories as $item}
-                        <li class="nav__item">
-                            <a class="nav__link" href="{$urls->category($item->slug)}"{if $item->slug === $currentCategory} aria-current="page"{/if}>{$item->name}</a>
-                        </li>
-                    {/foreach}
-                </ul>
-            </nav>
-        {/if}
+        <div class="header__inner container">
+            <a class="header__logo" href="{$urls->home()}">
+                <img src="{'/assets/img/logo.webp'|asset}" alt="{$site.name}" width="405" height="96">
+            </a>
+            {* Меню строится из базы, поэтому его нет на странице 404: там соединение не открывается *}
+            {if $categories}
+                {* На телефоне меню открывает флажок, без JS: его состояние CSS видит через :checked *}
+                <input class="header__toggle visually-hidden" type="checkbox" id="menu-toggle">
+                <label class="header__burger" for="menu-toggle">
+                    {include "partials/icon.tpl" name="menu"}
+                    {include "partials/icon.tpl" name="x"}
+                    <span class="visually-hidden">Меню</span>
+                </label>
+                <nav class="header__nav nav" aria-label="Категории">
+                    <ul class="nav__list">
+                        {foreach $categories as $item}
+                            <li class="nav__item">
+                                <a class="nav__link" href="{$urls->category($item->slug)}"{if $item->slug === $currentCategory} aria-current="page"{/if}>{$item->name}</a>
+                            </li>
+                        {/foreach}
+                    </ul>
+                </nav>
+            {/if}
+        </div>
     </header>
 
-    <main class="main">
+    <main class="main container" id="main">
         {if $meta->breadcrumbs}
             {include "partials/breadcrumbs.tpl" breadcrumbs=$meta->breadcrumbs}
         {/if}
@@ -62,9 +75,14 @@
     </main>
 
     <footer class="footer">
-        <a class="footer__logo" href="{$urls->home()}">{$site.name}</a>
-        <p class="footer__text">{$site.description}</p>
-        <p class="footer__copyright">© {$smarty.now|date_format:'Y'} {$site.name}</p>
+        <div class="footer__inner container">
+            <a class="footer__logo" href="{$urls->home()}">
+                <img src="{'/assets/img/logo.webp'|asset}" alt="{$site.name}" width="405" height="96">
+            </a>
+            <p class="footer__text">{$site.description}</p>
+            <a class="footer__link" href="{$urls->feed()}">{include "partials/icon.tpl" name="rss"}RSS</a>
+            <p class="footer__copyright">© {$smarty.now|date_format:'Y'} {$site.name}</p>
+        </div>
     </footer>
 </body>
 </html>

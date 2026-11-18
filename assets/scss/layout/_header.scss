@@ -1,0 +1,166 @@
+@use "../abstracts" as *;
+
+// Ссылка «Перейти к содержимому» видна только в фокусе: первая остановка Tab на странице
+.skip-link {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 10;
+    padding: 10px 16px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--color-primary);
+    border-radius: var(--radius-sm);
+
+    &:not(:focus) {
+        @include visually-hidden;
+    }
+}
+
+.header {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-line);
+
+    &__inner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        min-height: 64px;
+        column-gap: 32px;
+
+        @include from(md) {
+            min-height: 76px;
+        }
+    }
+
+    &__logo {
+        display: block;
+        padding-block: 8px;
+        border-radius: var(--radius-sm);
+
+        img {
+            width: auto;
+            height: 32px;
+
+            @include from(md) {
+                height: 38px;
+            }
+        }
+    }
+
+    // Кнопка меню на телефоне: label флажка, сам флажок скрыт, но остаётся в порядке Tab.
+    // Поля сверху и снизу держат высоту первой строки шапки: при открытом меню она не сжимается,
+    // а рамке фокуса есть место
+    &__burger {
+        display: grid;
+        place-items: center;
+        width: 44px;
+        height: 44px;
+        margin-block: 10px;
+        margin-left: auto;
+        color: var(--color-text);
+        cursor: pointer;
+        border-radius: 12px;
+
+        &:hover {
+            background: var(--color-primary-soft);
+        }
+
+        .icon {
+            grid-area: 1 / 1;
+            width: 26px;
+            height: 26px;
+        }
+
+        .icon:last-of-type {
+            visibility: hidden;
+        }
+
+        @include from(md) {
+            display: none;
+        }
+    }
+
+    &__toggle:focus-visible + &__burger {
+        outline: 3px solid var(--color-primary);
+        outline-offset: 2px;
+    }
+
+    &__toggle:checked + &__burger .icon {
+        visibility: hidden;
+
+        &:last-of-type {
+            visibility: visible;
+        }
+    }
+
+    &__nav {
+        display: none;
+        flex-basis: 100%;
+        padding-bottom: 12px;
+
+        @include from(md) {
+            display: block;
+            flex-basis: auto;
+            margin-left: auto;
+            padding: 0;
+        }
+    }
+
+    &__toggle:checked ~ &__nav {
+        display: block;
+    }
+}
+
+.nav {
+    &__list {
+        display: grid;
+
+        @include from(md) {
+            display: flex;
+            gap: 4px;
+        }
+    }
+
+    &__item + &__item {
+        border-top: 1px solid var(--color-line);
+
+        @include from(md) {
+            border-top: 0;
+        }
+    }
+
+    &__link {
+        display: block;
+        padding-block: 12px;
+        font-weight: 600;
+        color: var(--color-text);
+        border-radius: var(--radius-sm);
+        transition: color 0.2s, background-color 0.2s;
+
+        &:hover {
+            color: var(--color-primary);
+        }
+
+        &[aria-current] {
+            color: var(--color-primary);
+        }
+
+        // На 1024px шесть категорий и логотип едва помещаются в ряд: шрифт и поля поменьше
+        @include from(md) {
+            padding: 8px 10px;
+            font-size: 0.875rem;
+            white-space: nowrap;
+
+            &:hover,
+            &[aria-current] {
+                background: var(--color-primary-soft);
+            }
+        }
+
+        @include from(lg) {
+            padding-inline: 16px;
+            font-size: 0.9375rem;
+        }
+    }
+}
