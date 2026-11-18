@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Tests\Html;
 use App\Tests\TempDir;
 use PDO;
 use PDOException;
@@ -57,7 +58,7 @@ final class AppTest extends TestCase
         $response = $this->site->get($path);
 
         self::assertSame(404, $response->status);
-        self::assertStringContainsString('<h1>Страница не найдена</h1>', $response->body);
+        self::assertSame('Страница не найдена', (new Html($response->body))->text('//h1'));
         self::assertStringNotContainsString('rel="canonical"', $response->body);
     }
 
@@ -110,7 +111,7 @@ final class AppTest extends TestCase
         $root->remove();
 
         self::assertSame(500, $response->status);
-        self::assertStringContainsString('<h1>Что-то пошло не так</h1>', $response->body);
+        self::assertSame('Что-то пошло не так', (new Html($response->body))->text('//h1'));
         self::assertStringContainsString('404.tpl', $errors);
     }
 
@@ -122,7 +123,7 @@ final class AppTest extends TestCase
         $site->close();
 
         self::assertSame(500, $response->status);
-        self::assertStringContainsString('<h1>Что-то пошло не так</h1>', $response->body);
+        self::assertSame('Что-то пошло не так', (new Html($response->body))->text('//h1'));
         self::assertStringNotContainsString('Connection refused', $response->body);
         self::assertStringContainsString('Connection refused', $site->errorLog());
     }

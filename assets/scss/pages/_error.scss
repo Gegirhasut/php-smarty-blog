@@ -1,0 +1,38 @@
+// Страницы 404 и 500
+.message {
+    display: grid;
+    gap: 12px;
+    justify-items: center;
+    max-width: 36rem;
+    margin: 0 auto;
+    padding-block: clamp(48px, 10vw, 120px);
+    text-align: center;
+
+    &__code {
+        font-size: clamp(4rem, 3rem + 5vw, 7rem);
+        font-weight: 800;
+        line-height: 1;
+        color: var(--color-primary);
+    }
+
+    &__title {
+        font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+    }
+
+    &__text {
+        margin-bottom: 12px;
+        color: var(--color-muted);
+    }
+
+    &__error {
+        max-width: 100%;
+        margin-top: 24px;
+        padding: 16px;
+        overflow: auto;
+        font-size: 0.8125rem;
+        text-align: left;
+        background: var(--color-surface);
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius-sm);
+    }
+}
