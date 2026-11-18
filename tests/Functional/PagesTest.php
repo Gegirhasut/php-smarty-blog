@@ -265,6 +265,24 @@ final class PagesTest extends DatabaseTestCase
         self::assertSame('Инструменты', $document->getElementsByTagName('category')->item(0)?->textContent);
     }
 
+    public function testLlmsTxt(): void
+    {
+        $tools = $this->insertCategory('tools', 'Инструменты', 'Обзоры сервисов.');
+        $this->insertCategory('empty', 'Пустая');
+        $this->insertPost('first', [$tools], title: 'Первая');
+
+        $response = $this->site->get('/llms.txt');
+
+        self::assertSame(200, $response->status);
+        self::assertSame('text/plain; charset=utf-8', $response->headers['Content-Type']);
+        self::assertStringStartsWith("# Агентура\n\n> Блог об ИИ.\n", $response->body);
+        self::assertStringContainsString("## Инструменты\n", $response->body);
+        self::assertStringContainsString('- [Инструменты: все статьи](http://blog.test/category/tools): Обзоры сервисов.', $response->body);
+        self::assertStringContainsString('- [Первая](http://blog.test/post/first): Описание статьи first.', $response->body);
+        self::assertStringContainsString('(http://blog.test/feed.xml)', $response->body);
+        self::assertStringNotContainsString('Пустая', $response->body);
+    }
+
     /**
      * @return array<string, array{string, string}>
      */

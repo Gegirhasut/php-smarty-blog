@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Blog\LlmsTxt;
 use App\Blog\PageMeta;
 use App\Blog\RssFeed;
 use App\Blog\Sitemap;
 use App\Controller\CategoryController;
 use App\Controller\FeedController;
 use App\Controller\HomeController;
+use App\Controller\LlmsController;
 use App\Controller\PostController;
 use App\Controller\RobotsController;
 use App\Controller\SitemapController;
@@ -113,6 +115,10 @@ final class App
         $router->add('/feed.xml', fn (): Response => (new FeedController(
             new RssFeed($this->config),
             $this->categories(),
+            $this->posts(),
+        ))->index());
+        $router->add('/llms.txt', fn (): Response => (new LlmsController(
+            new LlmsTxt($this->config),
             $this->posts(),
         ))->index());
         $router->add('/robots.txt', fn (): Response => (new RobotsController($this->config->siteUrl))->index());
