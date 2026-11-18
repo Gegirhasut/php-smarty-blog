@@ -52,7 +52,12 @@ final class Site
     public function request(string $method, string $url): Response
     {
         parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
-        $config = new Config(siteName: 'Агентура', siteUrl: 'http://blog.test', debug: $this->debug);
+        $config = new Config(
+            siteName: 'Агентура',
+            siteDescription: 'Блог об ИИ.',
+            siteUrl: 'http://blog.test',
+            debug: $this->debug,
+        );
 
         return (new App($config, $this->root->path, $this->connect))
             ->handle(new Request($method, (string) parse_url($url, PHP_URL_PATH), $query));

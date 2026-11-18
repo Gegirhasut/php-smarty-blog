@@ -57,7 +57,7 @@
 
     <footer class="footer">
         <a class="footer__logo" href="/">{$site.name}</a>
-        <p class="footer__text">Блог об ИИ: модели и инструменты, агенты, исследования, деньги и люди.</p>
+        <p class="footer__text">{$site.description}</p>
         <p class="footer__copyright">© {$smarty.now|date_format:'Y'} {$site.name}</p>
     </footer>
 </body>

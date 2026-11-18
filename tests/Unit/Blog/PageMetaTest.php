@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Blog;
 use App\Blog\ListingQuery;
 use App\Blog\PageMeta;
 use App\Blog\Sort;
+use App\Core\Config;
 use App\Core\Meta;
 use PHPUnit\Framework\TestCase;
 
@@ -18,7 +19,7 @@ final class PageMetaTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->meta = new PageMeta('Агентура', 'https://blog.test');
+        $this->meta = new PageMeta(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', debug: false));
     }
 
     public function testHome(): void
@@ -33,7 +34,7 @@ final class PageMetaTest extends TestCase
             '@type' => 'WebSite',
             'name' => 'Агентура',
             'url' => 'https://blog.test/',
-            'description' => $meta->description,
+            'description' => 'Блог об ИИ.',
             'inLanguage' => 'ru',
         ]], $meta->schema);
     }

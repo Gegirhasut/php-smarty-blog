@@ -40,6 +40,7 @@ final class ConfigTest extends TestCase
         self::assertTrue($config->debug);
         self::assertSame('https://blog.example.com', $config->siteUrl);
         self::assertSame('Агентура', $config->siteName);
+        self::assertNotSame('', $config->siteDescription);
     }
 
     public function testProductionModeByDefault(): void

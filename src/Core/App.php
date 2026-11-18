@@ -33,8 +33,12 @@ final class App
             compileDir: $rootDir . '/var/templates_c',
             debug: $config->debug,
         );
-        $this->view->share('site', ['name' => $config->siteName, 'url' => $config->siteUrl]);
-        $meta = new PageMeta($config->siteName, $config->siteUrl);
+        $this->view->share('site', [
+            'name' => $config->siteName,
+            'description' => $config->siteDescription,
+            'url' => $config->siteUrl,
+        ]);
+        $meta = new PageMeta($config);
 
         // Контроллер и его репозитории создаются только для совпавшего маршрута,
         // поэтому на 404 и 405 соединение с БД не открывается

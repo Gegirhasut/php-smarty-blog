@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Blog;
 
+use App\Core\Config;
 use App\Core\Meta;
 use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
@@ -18,29 +19,26 @@ use DateTimeImmutable;
  */
 final class PageMeta
 {
-    private const DESCRIPTION = 'Блог об ИИ: новые модели и инструменты, агенты, исследования, деньги и люди.';
     // Картинка для соцсетей у страниц без своей обложки
     private const IMAGE = '/og.png';
     private const HOME = ['name' => 'Главная', 'url' => '/'];
 
-    public function __construct(
-        private readonly string $siteName,
-        private readonly string $siteUrl,
-    ) {
+    public function __construct(private readonly Config $config)
+    {
     }
 
     public function home(): Meta
     {
         return new Meta(
             title: 'Блог об ИИ',
-            description: self::DESCRIPTION,
+            description: $this->config->siteDescription,
             canonical: '/',
             image: self::IMAGE,
             schema: [[
                 '@type' => 'WebSite',
-                'name' => $this->siteName,
+                'name' => $this->config->siteName,
                 'url' => $this->url('/'),
-                'description' => self::DESCRIPTION,
+                'description' => $this->config->siteDescription,
                 'inLanguage' => 'ru',
             ]],
         );
@@ -89,7 +87,7 @@ final class PageMeta
         }
         $breadcrumbs[] = ['name' => $post['title'], 'url' => $path];
         // Авторов в блоге нет, статьи выпускает сам блог
-        $publisher = ['@type' => 'Organization', 'name' => $this->siteName, 'url' => $this->url('/')];
+        $publisher = ['@type' => 'Organization', 'name' => $this->config->siteName, 'url' => $this->url('/')];
 
         return new Meta(
             title: $post['title'],
@@ -137,6 +135,6 @@ final class PageMeta
 
     private function url(string $path): string
     {
-        return $this->siteUrl . $path;
+        return $this->config->siteUrl . $path;
     }
 }

@@ -19,7 +19,7 @@ final class LayoutTest extends TestCase
     {
         $this->compiled = new TempDir();
         $this->view = new View(dirname(__DIR__, 2) . '/templates', $this->compiled->path, debug: true);
-        $this->view->share('site', ['name' => 'Блог', 'url' => 'https://blog.test']);
+        $this->view->share('site', ['name' => 'Блог', 'description' => 'Блог об ИИ.', 'url' => 'https://blog.test']);
     }
 
     protected function tearDown(): void
