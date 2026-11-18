@@ -17,6 +17,20 @@ final class SeederTest extends DatabaseTestCase
 {
     private const FIXTURES = __DIR__ . '/../../fixtures/seeds';
 
+    private TempDir $uploads;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->uploads = new TempDir();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->uploads->remove();
+        parent::tearDown();
+    }
+
     public function testSeedsCategoriesPostsAndLinks(): void
     {
         $result = $this->seeder(self::FIXTURES)->run();
@@ -46,6 +60,15 @@ final class SeederTest extends DatabaseTestCase
             'published_at' => '2026-09-10 10:00:00',
             'content' => "Вступление.\n\n## Ольхон\n\nТекст раздела.",
         ], $post);
+    }
+
+    public function testCopiesUsedCoversToUploads(): void
+    {
+        $this->seeder(self::FIXTURES)->run();
+
+        foreach (['food-1', 'travel-1', 'travel-2'] as $cover) {
+            self::assertFileExists("{$this->uploads->path}/uploads/{$cover}.webp");
+        }
     }
 
     public function testOlderPostsGetSmallerIds(): void
@@ -130,6 +153,8 @@ final class SeederTest extends DatabaseTestCase
         $seeds = new TempDir();
         copy(self::FIXTURES . '/categories.php', $seeds->path . '/categories.php');
         mkdir($seeds->path . '/posts');
+        mkdir($seeds->path . '/images');
+        touch($seeds->path . '/images/travel-1.webp');
         file_put_contents(
             $seeds->path . '/posts/broken.php',
             "<?php return ['title' => 'Статья', 'description' => '', 'categories' => ['travel', 'missing'],"
@@ -150,8 +175,49 @@ final class SeederTest extends DatabaseTestCase
         $this->assertRowCount(0, 'posts');
     }
 
+    public function testRequiresCoverFiles(): void
+    {
+        $seeds = new TempDir();
+        $seeds->copy(self::FIXTURES, 'seeds');
+        unlink($seeds->path . '/seeds/images/food-1.webp');
+
+        try {
+            $this->seeder($seeds->path . '/seeds')->run();
+            self::fail('Сидер должен был остановиться без обложки');
+        } catch (RuntimeException $e) {
+            self::assertStringContainsString('food-1.webp', $e->getMessage());
+        } finally {
+            $seeds->remove();
+        }
+
+        $this->assertRowCount(0, 'posts');
+    }
+
+    public function testFailsWhenUploadsCannotBeCreated(): void
+    {
+        touch($this->uploads->path . '/file');
+        $seeder = new Seeder(
+            $this->pdo,
+            new CategoryRepository($this->pdo),
+            new PostRepository($this->pdo),
+            self::FIXTURES,
+            $this->uploads->path . '/file/uploads',
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Не удалось создать папку');
+
+        $seeder->run();
+    }
+
     private function seeder(string $seedsDir): Seeder
     {
-        return new Seeder($this->pdo, new CategoryRepository($this->pdo), new PostRepository($this->pdo), $seedsDir);
+        return new Seeder(
+            $this->pdo,
+            new CategoryRepository($this->pdo),
+            new PostRepository($this->pdo),
+            $seedsDir,
+            $this->uploads->path . '/uploads',
+        );
     }
 }

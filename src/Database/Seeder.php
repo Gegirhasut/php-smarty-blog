@@ -20,6 +20,7 @@ final class Seeder
         private readonly CategoryRepository $categories,
         private readonly PostRepository $posts,
         private readonly string $seedsDir,
+        private readonly string $uploadsDir,
     ) {
     }
 
@@ -34,6 +35,9 @@ final class Seeder
 
         $categories = $this->loadCategories();
         $posts = $this->loadPosts();
+
+        // Обложки копируются до вставки: если какой-то не хватает, база остается пустой
+        $this->copyCovers(array_unique(array_column($posts, 'image')));
 
         $this->pdo->beginTransaction();
         try {
@@ -121,6 +125,23 @@ final class Seeder
         $missing = is_array($data) ? array_diff($keys, array_keys($data)) : $keys;
         if ($missing !== []) {
             throw new RuntimeException("В {$file} нет полей: " . implode(', ', $missing));
+        }
+    }
+
+    /**
+     * @param array<string> $files
+     */
+    private function copyCovers(array $files): void
+    {
+        // mkdir() и copy() при ошибке только предупреждают, а сидер должен остановиться с понятным сообщением
+        if (!is_dir($this->uploadsDir) && !@mkdir($this->uploadsDir, 0775, true)) {
+            throw new RuntimeException("Не удалось создать папку {$this->uploadsDir}");
+        }
+
+        foreach ($files as $file) {
+            if (!@copy("{$this->seedsDir}/images/{$file}", "{$this->uploadsDir}/{$file}")) {
+                throw new RuntimeException("Не удалось скопировать обложку {$file} в {$this->uploadsDir}");
+            }
         }
     }
 

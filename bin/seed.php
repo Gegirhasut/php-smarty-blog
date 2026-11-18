@@ -23,7 +23,7 @@ try {
     }
     $schema->create();
 
-    $seeder = new Seeder($pdo, new CategoryRepository($pdo), new PostRepository($pdo), $root . '/database/seeds');
+    $seeder = new Seeder($pdo, new CategoryRepository($pdo), new PostRepository($pdo), $root . '/database/seeds', $root . '/public/uploads');
     $result = $seeder->run();
 } catch (RuntimeException $e) {
     fwrite(STDERR, 'Ошибка: ' . $e->getMessage() . PHP_EOL);
