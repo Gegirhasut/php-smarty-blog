@@ -30,12 +30,13 @@ trap 'stop; exit 0' TERM INT
 # База и пользователь сайта создаются при сборке, при каждом старте пользователь получает новый пароль.
 # Сайт ходит в MySQL через сокет (DB_HOST=localhost), поэтому пользователь - 'blog'@'localhost'
 init=/run/mysqld/init.sql
-cat > "$init" <<SQL
-CREATE DATABASE IF NOT EXISTS ${DB_NAME};
-CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost';
-ALTER USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
-GRANT ALL ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';
-SQL
+if [[ $mode == build ]]; then
+    echo "CREATE DATABASE ${DB_NAME}; CREATE USER '${DB_USER}'@'localhost';" > "$init"
+    echo "GRANT ALL ON ${DB_NAME}.* TO '${DB_USER}'@'localhost';" >> "$init"
+else
+    : > "$init"
+fi
+echo "ALTER USER '${DB_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';" >> "$init"
 chown mysql "$init"
 # Журнал MySQL идёт в лог контейнера и копией в файл: если сервер не поднимется, причина будет в конце лога
 mysql_log=/run/mysqld/error.log
@@ -73,6 +74,17 @@ log "MySQL готов за $(( SECONDS - started )) с"
 
 if [[ $mode == build ]]; then
     php bin/seed.php --fresh
+    # Шаблоны Smarty компилируются здесь же: на 0,1 CPU первая страница после старта иначе открывалась бы
+    # десятки секунд. HEAD рендерит страницу, но не засчитывает просмотр
+    php -r 'require "vendor/autoload.php";
+        $pdo = App\Database\Connection::fromEnvironment()->connect();
+        $app = new App\Core\App(App\Core\Config::load(), getcwd(), fn (): PDO => $pdo);
+        $category = $pdo->query("SELECT slug FROM categories LIMIT 1")->fetchColumn();
+        $post = $pdo->query("SELECT slug FROM posts LIMIT 1")->fetchColumn();
+        foreach (["/", "/category/{$category}", "/post/{$post}", "/404"] as $path) {
+            $app->handle(new App\Core\Request("HEAD", $path));
+        }'
+    chown -R www-data:www-data var
     stop
     rm "$mysql_log"
     exit 0
