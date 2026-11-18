@@ -1,0 +1,33 @@
+// Тема в CSS-переменных: цвета, скругления, тени и шрифт задаются здесь один раз
+:root {
+    color-scheme: light;
+
+    --color-primary: #3b2bd9;
+    --color-primary-hover: #2e1fbd;
+    --color-primary-soft: #eeecfd;
+    --color-primary-line: #dcd8fb;
+    // Коралловый - акцент для мелочей. Под белым текстом он темнее: так у кнопки контраст AA
+    --color-accent: #ff6b4a;
+    --color-accent-strong: #cf4428;
+    --color-accent-strong-hover: #b5391f;
+
+    --color-text: #1b1640;
+    --color-text-soft: #3d3960;
+    --color-muted: #5f5c78;
+    --color-line: #e7e5f3;
+    --color-bg: #f7f7fc;
+    --color-surface: #fff;
+
+    --radius-sm: 10px;
+    --radius: 14px;
+    --radius-lg: 20px;
+    --radius-pill: 999px;
+
+    --shadow: 0 1px 2px rgb(27 22 64 / 5%), 0 6px 20px rgb(27 22 64 / 6%);
+    --shadow-hover: 0 2px 4px rgb(27 22 64 / 6%), 0 14px 32px rgb(59 43 217 / 14%);
+
+    --font: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
+    --container: 1440px;
+    --gutter: clamp(16px, 4vw, 48px);
+}

@@ -1,0 +1,7 @@
+// Точка входа: dart-sass собирает отсюда public/assets/css/app.css (сервис sass в compose.yaml)
+@use "base/fonts";
+@use "base/tokens";
+@use "base/reset";
+@use "base/base";
+
+@use "layout/container";

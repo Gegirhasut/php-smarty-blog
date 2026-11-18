@@ -27,6 +27,11 @@
             <meta name="twitter:card" content="summary">
         {/if}
     {/if}
+    {* Шрифт нужен первому экрану: браузер начинает качать его вместе с CSS, а не после разбора стилей.
+       Адреса - как в @font-face, иначе файл скачается дважды *}
+    <link rel="preload" href="/assets/fonts/manrope-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/assets/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{'/assets/css/app.css'|asset}">
     <link rel="alternate" type="application/rss+xml" title="{$site.name}" href="{$urls->feed()}">
     {if $meta->schema}
         <script type="application/ld+json">{$meta->jsonLd() nofilter}</script>

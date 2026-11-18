@@ -9,6 +9,25 @@ services:
     depends_on:
       php:
         condition: service_healthy
+      # nginx стартует, когда CSS уже собран: страницы сразу открываются со стилями
+      sass:
+        condition: service_healthy
+
+  # Собирает assets/scss в public/assets/css/app.css и пересобирает при каждом изменении.
+  # --poll: события файловой системы из папки хоста доходят до контейнера не везде (Docker Desktop)
+  sass:
+    build:
+      context: .
+      target: sass
+    command: sass --watch --poll --style=compressed assets/scss/app.scss:public/assets/css/app.css
+    volumes:
+      - ./assets:/app/assets:ro
+      - ./public/assets/css:/app/public/assets/css
+    healthcheck:
+      test: ["CMD", "test", "-s", "public/assets/css/app.css"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
 
   php:
     build: .
