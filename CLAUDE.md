@@ -12,6 +12,7 @@
   Ошибка в SCSS - в `docker compose logs sass`.
 - `docker compose exec php php bin/seed.php --fresh` - пересоздать таблицы по `database/schema.sql` и заполнить базу из `database/seeds/`.
   Схема применяется целиком, изменения - через `--fresh`, данные учебные (миграций нет).
+  `--posts=N` - ещё N сгенерированных статей (`src/Seed/PostGenerator.php`) для проверки на объёме.
 - Тестовая база `blog_test` создаётся скриптом из `docker/mysql/init` при первом создании тома MySQL;
   если том старше этого скрипта - `docker compose down -v`.
   Тесты берут имя базы из `DB_TEST_NAME` (по умолчанию `blog_test`); compose её не задаёт, init-скрипт создаёт только `blog_test`.

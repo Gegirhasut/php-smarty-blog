@@ -98,6 +98,28 @@ final class SeederTest extends DatabaseTestCase
         );
     }
 
+    public function testGeneratesPostsInBatchesBeforeDemoPosts(): void
+    {
+        // Больше одной пачки: последняя неполная
+        $result = $this->seeder(self::FIXTURES)->run(1001);
+
+        self::assertSame(['categories' => 2, 'posts' => 1004], $result);
+        $byId = $this->select('SELECT slug FROM posts ORDER BY id')->fetchAll(PDO::FETCH_COLUMN);
+        // Архив старше демо-статей и вставлен раньше них: id растут вместе с датой
+        self::assertSame($this->select('SELECT slug FROM posts ORDER BY published_at, id')->fetchAll(PDO::FETCH_COLUMN), $byId);
+        self::assertSame(['pasta', 'baikal', 'kazan'], array_slice($byId, -3));
+        self::assertSame(
+            [1, 2],
+            $this->select(
+                'SELECT DISTINCT COUNT(*) AS links FROM category_post GROUP BY post_id ORDER BY links',
+            )->fetchAll(PDO::FETCH_COLUMN),
+        );
+        self::assertSame(
+            ['/uploads/food-1.webp', '/uploads/travel-1.webp', '/uploads/travel-2.webp'],
+            $this->select('SELECT DISTINCT image FROM posts ORDER BY image')->fetchAll(PDO::FETCH_COLUMN),
+        );
+    }
+
     public function testRefusesToSeedFilledDatabase(): void
     {
         $seeder = $this->seeder(self::FIXTURES);

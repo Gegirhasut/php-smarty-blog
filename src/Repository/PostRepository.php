@@ -203,12 +203,18 @@ final class PostRepository
     }
 
     /**
+     * @param list<string> $slugs
      * @return array<string, int>
      */
-    public function idsBySlug(): array
+    public function idsBySlug(array $slugs): array
     {
-        $statement = $this->pdo->prepare('SELECT slug, id FROM posts');
-        $statement->execute();
+        if ($slugs === []) {
+            return [];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($slugs), '?'));
+        $statement = $this->pdo->prepare("SELECT slug, id FROM posts WHERE slug IN ({$placeholders})");
+        $statement->execute($slugs);
 
         $ids = [];
         foreach (Row::all($statement) as $row) {

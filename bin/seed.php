@@ -12,19 +12,37 @@ use App\Seed\Seeder;
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 $root = dirname(__DIR__);
+$usage = 'Запуск: php bin/seed.php [--fresh] [--posts=N]';
+
+$fresh = false;
+$generate = 0;
+foreach (array_slice($argv ?? [], 1) as $arg) {
+    if ($arg === '--fresh') {
+        $fresh = true;
+    } elseif (str_starts_with($arg, '--posts=')) {
+        $generate = filter_var(substr($arg, strlen('--posts=')), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($generate === false) {
+            fwrite(STDERR, "Ошибка: --posts ждёт целое число больше нуля\n{$usage}\n");
+            exit(1);
+        }
+    } else {
+        fwrite(STDERR, "Ошибка: неизвестный аргумент {$arg}\n{$usage}\n");
+        exit(1);
+    }
+}
 
 // PDOException тоже RuntimeException: недоступная база, ошибка схемы и плохие данные выводятся одной строкой
 try {
     $pdo = Connection::fromEnvironment()->connect();
     $schema = new Schema($pdo, $root . '/database/schema.sql');
 
-    if (in_array('--fresh', $argv ?? [], true)) {
+    if ($fresh) {
         $schema->drop();
     }
     $schema->create();
 
     $seeder = new Seeder($pdo, new CategoryRepository($pdo), new PostRepository($pdo), $root . '/database/seeds', $root . '/public/uploads');
-    $result = $seeder->run();
+    $result = $seeder->run($generate);
 } catch (RuntimeException $e) {
     fwrite(STDERR, 'Ошибка: ' . $e->getMessage() . PHP_EOL);
     exit(1);

@@ -11,11 +11,25 @@ use PDO;
 use RuntimeException;
 use Throwable;
 
+/**
+ * @phpstan-type SeedPost array{
+ *     slug: string,
+ *     title: string,
+ *     image?: string,
+ *     description: string,
+ *     categories: list<string>,
+ *     published_at: string,
+ *     views: int,
+ *     content: string
+ * }
+ */
 final class Seeder
 {
     private const CATEGORY_KEYS = ['slug', 'name', 'description'];
-    // Обложка (image) необязательна, остальные поля - да
+    // Обложка (image) необязательна
     private const POST_KEYS = ['title', 'description', 'categories', 'published_at', 'views', 'content'];
+    // 1000 статей - около 3 МБ запроса и 7000 параметров: далеко от max_allowed_packet и предела в 65 535
+    private const BATCH = 1000;
 
     public function __construct(
         private readonly PDO $pdo,
@@ -27,9 +41,10 @@ final class Seeder
     }
 
     /**
+     * @param int $generate сколько статей сгенерировать в дополнение к демо-данным (PostGenerator)
      * @return array{categories: int, posts: int}
      */
-    public function run(): array
+    public function run(int $generate = 0): array
     {
         if ($this->categories->count() > 0) {
             throw new RuntimeException('В базе уже есть данные, для пересоздания запустите сидер с --fresh');
@@ -37,23 +52,23 @@ final class Seeder
 
         $categories = $this->loadCategories();
         $posts = $this->loadPosts();
+        $generator = $generate > 0 ? new PostGenerator($posts, array_column($categories, 'slug'), $generate) : null;
 
-        // Обложки копируются до вставки: если какой-то не хватает, база остается пустой
+        // Обложки копируются до вставки: если какой-то не хватает, база остается пустой.
+        // Сгенерированные статьи берут обложки демо-статей, отдельно их копировать не нужно
         $this->copyCovers(array_unique(array_column($posts, 'image')));
 
         $this->pdo->beginTransaction();
         try {
             $this->categories->insertMany($categories);
-            $this->posts->insertMany(array_map(fn (array $post): array => [
-                'title' => $post['title'],
-                'slug' => $post['slug'],
-                'image' => isset($post['image']) ? "/uploads/{$post['image']}" : null,
-                'description' => $post['description'],
-                'content' => $post['content'],
-                'views' => $post['views'],
-                'published_at' => $post['published_at'],
-            ], $posts));
-            $this->posts->attachCategories($this->links($posts));
+            $categoryIds = $this->categories->idsBySlug();
+            // Сгенерированный архив старше демо-статей и вставляется первым: id растут вместе с датой
+            if ($generator !== null) {
+                for ($from = 0; $from < $generate; $from += self::BATCH) {
+                    $this->insertPosts($generator->posts($from, min(self::BATCH, $generate - $from)), $categoryIds);
+                }
+            }
+            $this->insertPosts($posts, $categoryIds);
             $this->pdo->commit();
         } catch (Throwable $e) {
             // Если упало само соединение, транзакции уже нет, и rollBack() бросил бы своё исключение вместо исходного
@@ -63,7 +78,7 @@ final class Seeder
             throw $e;
         }
 
-        return ['categories' => count($categories), 'posts' => count($posts)];
+        return ['categories' => count($categories), 'posts' => count($posts) + $generate];
     }
 
     /**
@@ -97,16 +112,7 @@ final class Seeder
     }
 
     /**
-     * @return list<array{
-     *     slug: string,
-     *     title: string,
-     *     image?: string,
-     *     description: string,
-     *     categories: list<string>,
-     *     published_at: string,
-     *     views: int,
-     *     content: string
-     * }>
+     * @return list<SeedPost>
      */
     private function loadPosts(): array
     {
@@ -223,17 +229,35 @@ final class Seeder
     }
 
     /**
-     * @param list<array{slug: string, categories: list<string>}> $posts
+     * @param list<SeedPost> $posts
+     * @param array<string, int> $categoryIds
+     */
+    private function insertPosts(array $posts, array $categoryIds): void
+    {
+        $this->posts->insertMany(array_map(fn (array $post): array => [
+            'title' => $post['title'],
+            'slug' => $post['slug'],
+            'image' => isset($post['image']) ? "/uploads/{$post['image']}" : null,
+            'description' => $post['description'],
+            'content' => $post['content'],
+            'views' => $post['views'],
+            'published_at' => $post['published_at'],
+        ], $posts));
+        $this->posts->attachCategories($this->links($posts, $categoryIds));
+    }
+
+    /**
+     * @param list<SeedPost> $posts
+     * @param array<string, int> $categoryIds
      * @return list<array{int, int, int}>
      */
-    private function links(array $posts): array
+    private function links(array $posts, array $categoryIds): array
     {
-        $categoryIds = $this->categories->idsBySlug();
-        $postIds = $this->posts->idsBySlug();
+        $postIds = $this->posts->idsBySlug(array_column($posts, 'slug'));
 
         $links = [];
         foreach ($posts as $post) {
-            // Первая категория в файле статьи - основная
+            // Первая категория в списке статьи - основная
             foreach ($post['categories'] as $position => $slug) {
                 $categoryId = $categoryIds[$slug]
                     ?? throw new RuntimeException("У статьи {$post['slug']} неизвестная категория {$slug}");

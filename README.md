@@ -30,6 +30,9 @@ docker compose exec php php bin/seed.php --fresh
 
 Сайт - http://localhost:8080. Порт и доступ к базе можно поменять в `.env` (образец - `.env.example`).
 
+Для проверки на объёме - `docker compose exec php php bin/seed.php --fresh --posts=100000`: к демо-данным добавится
+100 000 сгенерированных статей.
+
 ## Тесты и анализ
 
 ```bash
