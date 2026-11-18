@@ -62,6 +62,7 @@ final class AppTest extends TestCase
             'категория' => ['/category/tools'],
             'статья' => ['/post/first'],
             'sitemap' => ['/sitemap.xml'],
+            'rss' => ['/feed.xml'],
             'robots' => ['/robots.txt'],
             'неизвестная страница' => ['/missing'],
         ];

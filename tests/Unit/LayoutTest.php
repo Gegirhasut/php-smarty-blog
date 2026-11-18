@@ -94,6 +94,14 @@ final class LayoutTest extends TestCase
         self::assertSame(['Агенты'], $page->texts('//nav//a[@aria-current="page"]'));
     }
 
+    public function testLinksToFeed(): void
+    {
+        self::assertSame(
+            '/feed.xml',
+            $this->render(new Meta())->attribute('//link[@rel="alternate"][@type="application/rss+xml"]', 'href'),
+        );
+    }
+
     public function testMenuIsHiddenWithoutCategories(): void
     {
         self::assertSame(0, $this->render(new Meta())->count('//nav'));

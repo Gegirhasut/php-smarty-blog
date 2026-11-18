@@ -162,6 +162,17 @@ final class PostRepositoryTest extends DatabaseTestCase
         );
     }
 
+    public function testLatestPostsAcrossCategories(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $agents = $this->insertCategory('agents');
+        $this->insertPost('old', [$tools], '2026-09-01 10:00:00');
+        $this->insertPost('new', [$agents], '2026-10-05 10:00:00');
+        $this->insertPost('middle', [$tools, $agents], '2026-10-01 10:00:00');
+
+        self::assertSame(['new', 'middle'], array_column($this->posts->latest(2), 'slug'));
+    }
+
     public function testSitemapListsAllPostsNewestFirst(): void
     {
         $tools = $this->insertCategory('tools');

@@ -244,6 +244,27 @@ final class PagesTest extends DatabaseTestCase
         ], $locs);
     }
 
+    public function testFeed(): void
+    {
+        $tools = $this->insertCategory('tools', 'Инструменты');
+        for ($day = 1; $day <= 22; $day++) {
+            $this->insertPost("post-{$day}", [$tools], sprintf('2026-10-%02d 10:00:00', $day));
+        }
+
+        $response = $this->site->get('/feed.xml');
+
+        self::assertSame(200, $response->status);
+        self::assertSame('application/rss+xml; charset=utf-8', $response->headers['Content-Type']);
+        $document = new DOMDocument();
+        self::assertTrue($document->loadXML($response->body));
+        $items = $document->getElementsByTagName('item');
+        // 20 последних статей, от новых к старым
+        self::assertSame(20, $items->length);
+        self::assertSame('http://blog.test/post/post-22', $items->item(0)?->getElementsByTagName('link')->item(0)?->textContent);
+        self::assertSame('http://blog.test/post/post-3', $items->item(19)?->getElementsByTagName('link')->item(0)?->textContent);
+        self::assertSame('Инструменты', $document->getElementsByTagName('category')->item(0)?->textContent);
+    }
+
     /**
      * @return array<string, array{string, string}>
      */

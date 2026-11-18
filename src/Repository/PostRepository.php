@@ -190,6 +190,22 @@ final class PostRepository
     }
 
     /**
+     * @return list<PostCard>
+     */
+    public function latest(int $limit): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, slug, title, description, image, views, published_at FROM posts
+             ORDER BY published_at DESC, id DESC
+             LIMIT ?',
+        );
+        $statement->execute([$limit]);
+
+        /** @var list<PostCard> */
+        return $statement->fetchAll();
+    }
+
+    /**
      * Все статьи для sitemap, от новых к старым. В один файл sitemap помещается 50 000 адресов:
      * блогу до этого далеко, а больше понадобился бы индекс из нескольких файлов.
      *

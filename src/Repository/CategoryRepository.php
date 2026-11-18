@@ -69,6 +69,32 @@ final class CategoryRepository
     }
 
     /**
+     * Названия категорий сразу для нескольких статей одним запросом.
+     *
+     * @param list<int> $postIds
+     * @return array<int, list<string>> id статьи => названия её категорий в порядке меню
+     */
+    public function namesByPost(array $postIds): array
+    {
+        if ($postIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($postIds), '?'));
+        $statement = $this->pdo->prepare(
+            "SELECT cp.post_id, c.name FROM category_post cp
+             JOIN categories c ON c.id = cp.category_id
+             WHERE cp.post_id IN ({$placeholders})
+             ORDER BY cp.post_id, cp.category_id",
+        );
+        $statement->execute($postIds);
+
+        // FETCH_GROUP раскладывает строки по первой колонке: [post_id => [название, ...]]
+        /** @var array<int, list<string>> */
+        return $statement->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN);
+    }
+
+    /**
      * Категории со статьями и дата самой свежей из них - для lastmod в sitemap.
      * slug можно выбирать при GROUP BY c.id: он зависит от первичного ключа.
      *

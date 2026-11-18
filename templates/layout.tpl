@@ -27,6 +27,7 @@
             <meta name="twitter:card" content="summary">
         {/if}
     {/if}
+    <link rel="alternate" type="application/rss+xml" title="{$site.name}" href="/feed.xml">
     {if $meta->schema}
         <script type="application/ld+json">{$meta->jsonLd() nofilter}</script>
     {/if}

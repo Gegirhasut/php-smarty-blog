@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Core;
 
 use App\Blog\PageMeta;
+use App\Blog\RssFeed;
 use App\Blog\Sitemap;
 use App\Controller\CategoryController;
+use App\Controller\FeedController;
 use App\Controller\HomeController;
 use App\Controller\PostController;
 use App\Controller\RobotsController;
@@ -105,6 +107,11 @@ final class App
         ))->show($request, $params['slug']));
         $router->add('/sitemap.xml', fn (): Response => (new SitemapController(
             new Sitemap($this->config->siteUrl),
+            $this->categories(),
+            $this->posts(),
+        ))->index());
+        $router->add('/feed.xml', fn (): Response => (new FeedController(
+            new RssFeed($this->config),
             $this->categories(),
             $this->posts(),
         ))->index());

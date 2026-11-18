@@ -43,6 +43,22 @@ final class CategoryRepositoryTest extends DatabaseTestCase
         self::assertNull($this->categories->findBySlug('missing'));
     }
 
+    public function testCategoryNamesForSeveralPosts(): void
+    {
+        $tools = $this->insertCategory('tools', 'Инструменты');
+        $agents = $this->insertCategory('agents', 'Агенты');
+        $first = $this->insertPost('first', [$agents, $tools]);
+        $second = $this->insertPost('second', [$agents]);
+        $other = $this->insertPost('other', [$tools]);
+
+        self::assertSame(
+            [$first => ['Инструменты', 'Агенты'], $second => ['Агенты']],
+            $this->categories->namesByPost([$second, $first]),
+        );
+        self::assertArrayNotHasKey($other, $this->categories->namesByPost([$first]));
+        self::assertSame([], $this->categories->namesByPost([]));
+    }
+
     public function testSitemapDatesAreNewestPostOfCategory(): void
     {
         $tools = $this->insertCategory('tools');
