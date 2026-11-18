@@ -9,6 +9,8 @@ use App\Tests\DatabaseTestCase;
 
 final class CategoryRepositoryTest extends DatabaseTestCase
 {
+    protected bool $rollBack = true;
+
     private CategoryRepository $categories;
 
     protected function setUp(): void

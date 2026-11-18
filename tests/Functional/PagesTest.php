@@ -18,6 +18,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
  */
 final class PagesTest extends DatabaseTestCase
 {
+    // Приложение работает с тем же соединением и видит фикстуры из незакоммиченной транзакции
+    protected bool $rollBack = true;
+
     private static TempDir $root;
     private Site $site;
 
@@ -36,16 +39,12 @@ final class PagesTest extends DatabaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // Тест целиком в транзакции: фикстуры не ждут записи на диск после каждой вставки,
-        // а приложение работает с тем же соединением и видит их
-        $this->pdo->beginTransaction();
         $this->site = new Site(self::$root, fn (): PDO => $this->pdo);
     }
 
     protected function tearDown(): void
     {
         $this->site->close();
-        $this->pdo->rollBack();
         parent::tearDown();
     }
 

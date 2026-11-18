@@ -19,31 +19,64 @@ abstract class DatabaseTestCase extends TestCase
     // Сначала таблица связей: её внешние ключи ссылаются на остальные
     private const TABLES = ['category_post', 'posts', 'categories'];
 
+    /**
+     * Тест целиком в транзакции с откатом: вставки фикстур не ждут записи на диск.
+     * Не подходит тестам, которые сами открывают транзакцию или меняют схему: DDL в MySQL завершает транзакцию.
+     */
+    protected bool $rollBack = false;
+
+    // Схема уже пересоздана в этом запуске тестов
+    private static bool $schemaCreated = false;
+
     protected PDO $pdo;
     protected Schema $schema;
 
     public static function setUpBeforeClass(): void
     {
-        // DROP и CREATE в MySQL занимают около полусекунды, поэтому схема пересоздаётся раз на класс
+        // DROP и CREATE в MySQL занимают около полусекунды, поэтому схема пересоздаётся раз за запуск
         // (так подхватываются правки schema.sql), а перед каждым тестом таблицы только очищаются
-        $schema = self::schema(self::connect());
-        $schema->drop();
-        $schema->create();
+        if (!self::$schemaCreated) {
+            $schema = self::schema(self::connect());
+            $schema->drop();
+            $schema->create();
+            self::$schemaCreated = true;
+        }
     }
 
     protected function setUp(): void
     {
         $this->pdo = self::connect();
         $this->schema = self::schema($this->pdo);
+        self::clearTables($this->pdo);
 
-        // Предыдущий тест мог удалить таблицы, а на существующих create() ничего не меняет
-        $this->schema->create();
-        foreach (self::TABLES as $table) {
-            $this->pdo->exec("DELETE FROM {$table}");
+        if ($this->rollBack) {
+            $this->pdo->beginTransaction();
         }
-        // Тесты сверяют id, поэтому нумерация каждый раз начинается с единицы
-        $this->pdo->exec('ALTER TABLE posts AUTO_INCREMENT = 1');
-        $this->pdo->exec('ALTER TABLE categories AUTO_INCREMENT = 1');
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->rollBack) {
+            $this->pdo->rollBack();
+        }
+    }
+
+    protected static function connect(): PDO
+    {
+        return Connection::fromEnvironment(Env::get('DB_TEST_NAME', 'blog_test'))->connect();
+    }
+
+    /**
+     * Одной транзакцией: MySQL сбрасывает на диск один коммит, а не три. Id после очистки продолжают расти,
+     * поэтому тесты берут их из insertCategory() и insertPost(), а не рассчитывают на нумерацию с единицы.
+     */
+    protected static function clearTables(PDO $pdo): void
+    {
+        $pdo->beginTransaction();
+        foreach (self::TABLES as $table) {
+            $pdo->exec("DELETE FROM {$table}");
+        }
+        $pdo->commit();
     }
 
     protected function select(string $sql): PDOStatement
@@ -96,11 +129,6 @@ abstract class DatabaseTestCase extends TestCase
         }
 
         return $postId;
-    }
-
-    private static function connect(): PDO
-    {
-        return Connection::fromEnvironment(Env::get('DB_TEST_NAME', 'blog_test'))->connect();
     }
 
     private static function schema(PDO $pdo): Schema

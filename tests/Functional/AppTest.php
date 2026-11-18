@@ -15,19 +15,28 @@ use PHPUnit\Framework\TestCase;
  */
 final class AppTest extends TestCase
 {
-    private TempDir $root;
+    // Один корень на класс: шаблоны компилируются один раз, а не в каждом тесте
+    private static TempDir $root;
     private Site $site;
+
+    public static function setUpBeforeClass(): void
+    {
+        self::$root = Site::root();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        self::$root->remove();
+    }
 
     protected function setUp(): void
     {
-        $this->root = Site::root();
-        $this->site = new Site($this->root, fn (): PDO => self::fail('Соединение с базой открывать не нужно'));
+        $this->site = new Site(self::$root, fn (): PDO => self::fail('Соединение с базой открывать не нужно'));
     }
 
     protected function tearDown(): void
     {
         $this->site->close();
-        $this->root->remove();
     }
 
     /**
@@ -90,18 +99,24 @@ final class AppTest extends TestCase
 
     public function testBrokenNotFoundPageBecomesServerError(): void
     {
-        unlink($this->root->path . '/templates/errors/404.tpl');
+        // Свой корень: испорченный шаблон не должен достаться другим тестам
+        $root = Site::root();
+        unlink($root->path . '/templates/errors/404.tpl');
+        $site = new Site($root, fn (): PDO => self::fail('Соединение с базой открывать не нужно'));
 
-        $response = $this->site->get('/missing');
+        $response = $site->get('/missing');
+        $site->close();
+        $errors = $site->errorLog();
+        $root->remove();
 
         self::assertSame(500, $response->status);
         self::assertStringContainsString('<h1>Что-то пошло не так</h1>', $response->body);
-        self::assertStringContainsString('404.tpl', $this->site->errorLog());
+        self::assertStringContainsString('404.tpl', $errors);
     }
 
     public function testServerErrorHidesDetailsInProduction(): void
     {
-        $site = new Site($this->root, fn (): PDO => throw new PDOException('Connection refused'));
+        $site = new Site(self::$root, fn (): PDO => throw new PDOException('Connection refused'));
 
         $response = $site->get('/');
         $site->close();
@@ -114,7 +129,7 @@ final class AppTest extends TestCase
 
     public function testServerErrorShowsDetailsInDevelopment(): void
     {
-        $site = new Site($this->root, fn (): PDO => throw new PDOException('Connection refused'), debug: true);
+        $site = new Site(self::$root, fn (): PDO => throw new PDOException('Connection refused'), debug: true);
 
         $response = $site->get('/');
         $site->close();

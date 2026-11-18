@@ -10,6 +10,13 @@ use PDOException;
 
 final class SchemaTest extends DatabaseTestCase
 {
+    protected function tearDown(): void
+    {
+        // testDropRemovesTables() удаляет таблицы, а следующим тестам класса они нужны
+        $this->schema->create();
+        parent::tearDown();
+    }
+
     public function testCreatesTables(): void
     {
         $tables = $this->select('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);

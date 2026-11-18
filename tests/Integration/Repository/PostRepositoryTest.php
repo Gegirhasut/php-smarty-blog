@@ -11,6 +11,8 @@ use PDO;
 
 final class PostRepositoryTest extends DatabaseTestCase
 {
+    protected bool $rollBack = true;
+
     private PostRepository $posts;
 
     protected function setUp(): void

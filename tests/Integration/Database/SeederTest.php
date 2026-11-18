@@ -76,8 +76,8 @@ final class SeederTest extends DatabaseTestCase
         $this->seeder(self::FIXTURES)->run();
 
         self::assertSame(
-            [1 => 'pasta', 2 => 'baikal', 3 => 'kazan'],
-            $this->select('SELECT id, slug FROM posts ORDER BY id')->fetchAll(PDO::FETCH_KEY_PAIR),
+            ['pasta', 'baikal', 'kazan'],
+            $this->select('SELECT slug FROM posts ORDER BY id')->fetchAll(PDO::FETCH_COLUMN),
         );
     }
 

@@ -12,19 +12,20 @@ use PHPUnit\Framework\TestCase;
 
 final class LayoutTest extends TestCase
 {
-    private TempDir $compiled;
-    private View $view;
+    // Шаблоны компилируются один раз на класс, а не в каждом тесте
+    private static TempDir $compiled;
+    private static View $view;
 
-    protected function setUp(): void
+    public static function setUpBeforeClass(): void
     {
-        $this->compiled = new TempDir();
-        $this->view = new View(dirname(__DIR__, 2) . '/templates', $this->compiled->path, debug: true);
-        $this->view->share('site', ['name' => 'Блог', 'description' => 'Блог об ИИ.', 'url' => 'https://blog.test']);
+        self::$compiled = new TempDir();
+        self::$view = new View(dirname(__DIR__, 2) . '/templates', self::$compiled->path, debug: true);
+        self::$view->share('site', ['name' => 'Блог', 'description' => 'Блог об ИИ.', 'url' => 'https://blog.test']);
     }
 
-    protected function tearDown(): void
+    public static function tearDownAfterClass(): void
     {
-        $this->compiled->remove();
+        self::$compiled->remove();
     }
 
     public function testRendersSeoTags(): void
@@ -134,7 +135,7 @@ final class LayoutTest extends TestCase
      */
     private function render(Meta $meta, array $data = []): Html
     {
-        return new Html($this->view->render(
+        return new Html(self::$view->render(
             'string:{extends "layout.tpl"}{block "content"}<h1>Страница</h1>{/block}',
             ['meta' => $meta] + $data,
         ));

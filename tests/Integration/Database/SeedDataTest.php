@@ -16,26 +16,34 @@ use PDO;
  */
 final class SeedDataTest extends DatabaseTestCase
 {
-    private TempDir $uploads;
+    private static TempDir $uploads;
 
-    protected function setUp(): void
+    public static function setUpBeforeClass(): void
     {
-        parent::setUp();
-        $this->uploads = new TempDir();
+        parent::setUpBeforeClass();
 
+        // Залить настоящие данные - самое долгое в наборе, а тесты класса их только читают: заливаем один раз
+        self::$uploads = new TempDir();
+        $pdo = self::connect();
+        self::clearTables($pdo);
         (new Seeder(
-            $this->pdo,
-            new CategoryRepository($this->pdo),
-            new PostRepository($this->pdo),
+            $pdo,
+            new CategoryRepository($pdo),
+            new PostRepository($pdo),
             dirname(__DIR__, 3) . '/database/seeds',
-            $this->uploads->path,
+            self::$uploads->path,
         ))->run();
     }
 
-    protected function tearDown(): void
+    public static function tearDownAfterClass(): void
     {
-        $this->uploads->remove();
-        parent::tearDown();
+        self::$uploads->remove();
+    }
+
+    protected function setUp(): void
+    {
+        // Без очистки таблиц из DatabaseTestCase: данные залиты в setUpBeforeClass()
+        $this->pdo = self::connect();
     }
 
     public function testFillsEveryCategory(): void
@@ -60,13 +68,13 @@ final class SeedDataTest extends DatabaseTestCase
         self::assertCount(24, $images);
         foreach ($images as $image) {
             self::assertIsString($image);
-            self::assertFileExists($this->uploads->path . '/' . basename($image));
+            self::assertFileExists(self::$uploads->path . '/' . basename($image));
         }
     }
 
     public function testFieldsFitSchema(): void
     {
-        // В строгом режиме MySQL не обрезает длинное значение, а отклоняет вставку, и сидер в setUp() упал бы
+        // В строгом режиме MySQL не обрезает длинное значение, а отклоняет вставку, и сидер упал бы ещё до тестов
         $mode = $this->select('SELECT @@sql_mode')->fetchColumn();
 
         self::assertIsString($mode);
