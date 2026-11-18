@@ -63,13 +63,22 @@ final class SeedDataTest extends DatabaseTestCase
 
     public function testCopiesEveryCover(): void
     {
-        $images = $this->select('SELECT DISTINCT image FROM posts')->fetchAll(PDO::FETCH_COLUMN);
+        $images = $this->select('SELECT DISTINCT image FROM posts WHERE image IS NOT NULL')->fetchAll(PDO::FETCH_COLUMN);
 
         self::assertCount(24, $images);
         foreach ($images as $image) {
             self::assertIsString($image);
             self::assertFileExists(self::$uploads->path . '/' . basename($image));
         }
+    }
+
+    public function testOnePostWithoutCover(): void
+    {
+        // Одна статья без обложки показывает заглушку; несколько рядом смотрелись бы как поломка
+        self::assertSame(
+            ['alibaba-qwen4-max-million-tokenov'],
+            $this->select('SELECT slug FROM posts WHERE image IS NULL')->fetchAll(PDO::FETCH_COLUMN),
+        );
     }
 
     public function testFieldsFitSchema(): void

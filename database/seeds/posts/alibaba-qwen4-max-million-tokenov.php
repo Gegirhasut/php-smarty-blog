@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     'title' => 'Alibaba выпустила Qwen4-Max с контекстом в миллион токенов',
     'description' => 'Новая флагманская модель Qwen уже доступна через QwenCloud и API. Alibaba заявляет о снижении средней стоимости длительной задачи с 4,43 до 1,67 доллара в собственном тесте.',
-    'image' => 'laboratorii-4.webp',
     'categories' => ['laboratorii'],
     'published_at' => '2026-11-16 19:16:00',
     'views' => 2504,
