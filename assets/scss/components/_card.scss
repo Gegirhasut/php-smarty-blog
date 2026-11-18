@@ -1,0 +1,176 @@
+@use "../abstracts" as *;
+
+// Сетка карточек: одна колонка на телефоне, две на планшете, три на десктопе
+.cards {
+    display: grid;
+    gap: 20px;
+
+    @include from(sm) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    // В две колонки нечётная последняя карточка осталась бы в ряду одна: она занимает весь ряд
+    // и ложится горизонтально, картинка - ровно в ширину колонки над ней
+    @include between(sm, md) {
+        > .card:last-child:nth-child(odd) {
+            grid-column: 1 / -1;
+            flex-direction: row;
+
+            // min-width: без него картинка не ужмётся меньше width: 100%
+            .card__image {
+                flex: 0 0 calc(50% - 10px);
+                min-width: 0;
+                aspect-ratio: auto;
+                object-fit: cover;
+            }
+        }
+    }
+
+    @include from(md) {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 24px;
+    }
+
+    @include from(lg) {
+        gap: 28px;
+    }
+
+    // На телефоне карточки секции главной - ряд с прокруткой вбок: видна одна и край следующей.
+    // Ряд выходит под поля контейнера, чтобы карточки уезжали за край экрана
+    &--row {
+        @include until(sm) {
+            grid-auto-columns: 84%;
+            grid-auto-flow: column;
+            gap: 14px;
+            margin: -8px calc(-1 * var(--gutter)) -16px;
+            padding: 8px var(--gutter) 16px;
+            overflow-x: auto;
+            overscroll-behavior-x: contain;
+            scroll-snap-type: x mandatory;
+            scroll-padding-inline: var(--gutter);
+            scrollbar-width: none;
+
+            > * {
+                scroll-snap-align: start;
+            }
+        }
+    }
+}
+
+.card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--color-surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.2s, transform 0.2s;
+
+    &:hover {
+        box-shadow: var(--shadow-hover);
+        transform: translateY(-2px);
+    }
+
+    &__image {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        object-fit: cover;
+        background: var(--color-primary-soft);
+    }
+
+    &__body {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        gap: 8px;
+        padding: 16px 20px 18px;
+    }
+
+    &__title {
+        @include line-clamp(3);
+
+        font-size: 1.0625rem;
+        font-weight: 750;
+        line-height: 1.35;
+        letter-spacing: 0;
+    }
+
+    &__link {
+        color: var(--color-text);
+        transition: color 0.2s;
+
+        // Вся карточка - ссылка на статью, но в разметке ссылка одна, на заголовке
+        &::after {
+            position: absolute;
+            inset: 0;
+            content: "";
+            border-radius: inherit;
+        }
+
+        &:focus-visible {
+            outline: none;
+        }
+
+        &:focus-visible::after {
+            outline: 3px solid var(--color-primary);
+            outline-offset: -3px;
+        }
+    }
+
+    &:hover &__link {
+        color: var(--color-primary);
+    }
+
+    &__description {
+        @include line-clamp(2);
+
+        font-size: 0.9375rem;
+        line-height: 1.5;
+        color: var(--color-muted);
+    }
+
+    // Дата и просмотры прижаты к низу: в ряду карточек они на одной линии
+    &__info {
+        margin-top: auto;
+        padding-top: 4px;
+    }
+
+    // В сайдбаре: миниатюра слева, без тени и описания
+    &--compact {
+        flex-direction: row;
+        gap: 14px;
+        align-items: flex-start;
+        overflow: visible;
+        background: none;
+        border-radius: var(--radius-sm);
+        box-shadow: none;
+
+        &:hover {
+            box-shadow: none;
+            transform: none;
+        }
+    }
+
+    &--compact &__image {
+        flex: none;
+        width: 92px;
+        aspect-ratio: 3 / 2;
+        border-radius: var(--radius-sm);
+    }
+
+    &--compact &__body {
+        gap: 6px;
+        padding: 0;
+    }
+
+    &--compact &__title {
+        font-size: 0.9375rem;
+    }
+
+    &--compact &__info {
+        gap: 4px 14px;
+        padding-top: 0;
+        font-size: 0.75rem;
+    }
+}

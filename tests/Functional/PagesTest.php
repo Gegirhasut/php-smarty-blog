@@ -71,15 +71,15 @@ final class PagesTest extends DatabaseTestCase
         self::assertSame(['Инструменты', 'Агенты'], $page->texts('//main//h2'));
         self::assertSame(
             ['/category/tools', '/category/agents'],
-            $page->attributes('//main//a[text()="Все статьи"]', 'href'),
+            $page->attributes('//main//a[normalize-space()="Все статьи"]', 'href'),
         );
         self::assertSame(
             ['/post/c', '/post/b', '/post/a', '/post/both'],
             $page->attributes('//main//article//h3/a', 'href'),
         );
-        // Сразу грузится только первая картинка, остальные - по мере прокрутки
-        self::assertSame(['high', '', '', ''], $page->attributes('//main//img', 'fetchpriority'));
-        self::assertSame(['', 'lazy', 'lazy', 'lazy'], $page->attributes('//main//img', 'loading'));
+        // Сразу грузится только картинка баннера, обложки статей - по мере прокрутки
+        self::assertSame(['high', '', '', '', ''], $page->attributes('//main//img', 'fetchpriority'));
+        self::assertSame(['', 'lazy', 'lazy', 'lazy', 'lazy'], $page->attributes('//main//img', 'loading'));
         self::assertSame('http://blog.test/', $page->attribute('//link[@rel="canonical"]', 'href'));
         self::assertArrayHasKey('WebSite', $page->schema());
     }
@@ -227,7 +227,7 @@ final class PagesTest extends DatabaseTestCase
         $page = $this->page($this->site->get('/post/post'));
 
         self::assertSame(2000, $this->views('post'));
-        self::assertSame('Просмотры: 2 000', $page->text(self::POST . '/header//span[span="Просмотры:"]'));
+        self::assertSame(['Просмотры: 2 000'], $page->texts(self::POST . '/header//span[span="Просмотры:"]'));
     }
 
     public function testSitemap(): void
