@@ -8,3 +8,5 @@ parameters:
     stubFiles:
         # В Smarty у Template::fetch() тип mixed, хотя метод всегда возвращает строку
         - tests/stubs/Smarty.stub
+        # С ERRMODE_EXCEPTION PDO::prepare() не возвращает false, а бросает исключение
+        - tests/stubs/PDO.stub
