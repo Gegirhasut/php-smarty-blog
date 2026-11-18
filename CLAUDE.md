@@ -6,17 +6,24 @@
 ## Запуск
 - `docker compose up -d --build` - сайт на http://localhost:8080 (порт - `APP_PORT`).
 - Код монтируется в контейнер, правки видны сразу; скомпилированные шаблоны Smarty лежат в томе `var`.
+- `docker compose exec php php bin/seed.php --fresh` - пересоздать таблицы по `database/schema.sql` и заполнить базу из `database/seeds/`.
+  Схема применяется целиком, изменения - через `--fresh`, данные учебные (миграций нет).
+- Тестовая база `blog_test` создаётся скриптом из `docker/mysql/init` при первом создании тома MySQL;
+  если том старше этого скрипта - `docker compose down -v`.
+  Тесты берут имя базы из `DB_TEST_NAME` (по умолчанию `blog_test`); compose её не задаёт, init-скрипт создаёт только `blog_test`.
 
 ## Тесты и анализ
 - `docker compose exec php composer test` - PHPUnit; один набор: `composer test -- --testsuite unit`.
 - `docker compose exec php composer analyse` - PHPStan, уровень max, без baseline.
 - `tests/Unit` - классы и шаблоны по отдельности, `tests/Functional` - приложение целиком через `App::handle()` без HTTP,
-  `tests/Integration` - с MySQL (появятся вместе с базой).
+  `tests/Integration` - на настоящем MySQL в базе `blog_test` (`composer test -- --testsuite integration`).
 - CI (`.github/workflows/ci.yml`): `composer validate --strict`, PHPStan и PHPUnit на PHP 8.1 и 8.5 - на push в `main` и в pull request.
 
 ## Структура
 - `public/index.php` - единственная точка входа, nginx отдаёт в неё всё, кроме статики.
-- `src/Core` - ядро: `App` (маршруты и обработка запроса), `Router`, `Request`, `Response`, `View` (Smarty), `Meta` (SEO), `Config`.
+- `src/Core` - ядро: `App` (маршруты и обработка запроса), `Router`, `Request`, `Response`, `View` (Smarty), `Meta` (SEO), `Config`, `Env`.
+- `src/Database` - подключение PDO, применение схемы и сидер; `src/Repository` - все SQL-запросы к таблицам.
+- `database` - `schema.sql` и данные сидера в `seeds/` (категории, статьи, обложки); `bin/seed.php` - схема и сидинг.
 - `src/Controller` - тонкие контроллеры: разбирают запрос, зовут репозитории, отдают данные в шаблон.
 - `templates` - Smarty: `layout.tpl` и шаблоны страниц, ошибки в `errors/`.
 - `Dockerfile` и `docker/nginx` - окружение для разработки; образ для демо появится на этапе 6.
