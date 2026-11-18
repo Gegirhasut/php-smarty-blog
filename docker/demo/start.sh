@@ -28,11 +28,20 @@ ALTER USER '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASSWORD}';
 GRANT ALL ON ${DB_NAME}.* TO '${DB_USER}'@'127.0.0.1';
 SQL
 chown mysql "$init"
-mysqld --init-file="$init" &
+# Журнал MySQL идёт в лог контейнера и копией в файл: если сервер не поднимется, причина будет в конце лога
+mysql_log=/run/mysqld/error.log
+mysqld --init-file="$init" > >(tee "$mysql_log" >&2) 2>&1 &
 pids+=("$!")
 
 until php -r 'try { new PDO("mysql:host=127.0.0.1;dbname=" . getenv("DB_NAME"), getenv("DB_USER"), getenv("DB_PASSWORD")); } catch (PDOException) { exit(1); }' 2>/dev/null; do
-    kill -0 "${pids[0]}" 2>/dev/null || { echo 'MySQL не запустился' >&2; exit 1; }
+    if ! kill -0 "${pids[0]}" 2>/dev/null; then
+        # Код больше 128 - процесс убит сигналом: 137 - SIGKILL (обычно память), 159 - SIGSYS (запрещённый вызов)
+        code=0
+        wait "${pids[0]}" || code=$?
+        echo "MySQL не запустился: код ${code}, CPU $(nproc). Конец журнала MySQL:" >&2
+        tail -n 30 "$mysql_log" >&2
+        exit 1
+    fi
     sleep 1
 done
 rm "$init"
