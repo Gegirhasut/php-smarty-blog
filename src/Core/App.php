@@ -121,6 +121,7 @@ final class App
         ))->index());
         $router->add('/llms.txt', fn (): Response => (new LlmsController(
             new LlmsTxt($this->config, $this->urls),
+            $this->categories(),
             $this->posts(),
         ))->index());
         $router->add('/robots.txt', fn (): Response => (new RobotsController($this->urls))->index());

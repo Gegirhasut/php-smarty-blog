@@ -5,17 +5,15 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Core\Response;
+use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
 use App\Seo\LlmsTxt;
 
 final class LlmsController
 {
-    // С запасом на все статьи нынешнего блога, но файл не разрастётся без предела:
-    // остальные статьи доступны по ссылке на категорию
-    private const POSTS_PER_CATEGORY = 50;
-
     public function __construct(
         private readonly LlmsTxt $llms,
+        private readonly CategoryRepository $categories,
         private readonly PostRepository $posts,
     ) {
     }
@@ -23,7 +21,7 @@ final class LlmsController
     public function index(): Response
     {
         return new Response(
-            $this->llms->render($this->posts->latestByCategory(self::POSTS_PER_CATEGORY)),
+            $this->llms->render($this->categories->withPosts(), $this->posts->byMainCategory()),
             headers: ['Content-Type' => 'text/plain; charset=utf-8'],
         );
     }

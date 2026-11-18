@@ -170,6 +170,22 @@ final class PostRepositoryTest extends DatabaseTestCase
         );
     }
 
+    public function testPostsByMainCategory(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $agents = $this->insertCategory('agents');
+        $this->insertCategory('empty');
+        $this->insertPost('old-tool', [$tools], '2026-09-01 10:00:00');
+        $this->insertPost('agent-and-tool', [$agents, $tools], '2026-10-05 10:00:00');
+        $this->insertPost('new-tool', [$tools, $agents], '2026-10-07 10:00:00');
+
+        $posts = $this->posts->byMainCategory();
+
+        self::assertSame([$tools, $agents], array_keys($posts));
+        self::assertSame(['new-tool', 'old-tool'], array_column($posts[$tools], 'slug'));
+        self::assertSame(['agent-and-tool'], array_column($posts[$agents], 'slug'));
+    }
+
     public function testLatestPostsAcrossCategories(): void
     {
         $tools = $this->insertCategory('tools');

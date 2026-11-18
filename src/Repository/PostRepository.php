@@ -145,6 +145,29 @@ final class PostRepository
     }
 
     /**
+     * Все статьи, разложенные по основной категории, в каждой - от новых к старым.
+     *
+     * @return array<int, list<PostCard>> id категории => статьи
+     */
+    public function byMainCategory(): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT cp.category_id, ' . self::CARD_COLUMNS . ' FROM category_post cp
+             JOIN posts p ON p.id = cp.post_id
+             WHERE cp.position = 0
+             ORDER BY cp.category_id, p.published_at DESC, p.id DESC',
+        );
+        $statement->execute();
+
+        $posts = [];
+        foreach (Row::all($statement) as $row) {
+            $posts[$row->int('category_id')][] = PostCard::fromRow($row);
+        }
+
+        return $posts;
+    }
+
+    /**
      * @return list<PostCard>
      */
     public function latest(int $limit): array

@@ -276,8 +276,9 @@ final class PagesTest extends DatabaseTestCase
     public function testLlmsTxt(): void
     {
         $tools = $this->insertCategory('tools', 'Инструменты', 'Обзоры сервисов.');
+        $agents = $this->insertCategory('agents', 'Агенты');
         $this->insertCategory('empty', 'Пустая');
-        $this->insertPost('first', [$tools], title: 'Первая');
+        $this->insertPost('first', [$tools, $agents], title: 'Первая');
 
         $response = $this->site->get('/llms.txt');
 
@@ -289,6 +290,9 @@ final class PagesTest extends DatabaseTestCase
         self::assertStringContainsString('- [Первая](http://blog.test/post/first): Описание статьи first.', $response->body);
         self::assertStringContainsString('(http://blog.test/feed.xml)', $response->body);
         self::assertStringNotContainsString('Пустая', $response->body);
+        // Статья из двух категорий упомянута один раз - в основной
+        self::assertSame(1, substr_count($response->body, '/post/first'));
+        self::assertStringContainsString("## Агенты\n\n- [Агенты: все статьи]", $response->body);
     }
 
     /**

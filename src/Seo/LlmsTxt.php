@@ -23,14 +23,16 @@ final class LlmsTxt
     }
 
     /**
-     * @param list<array{category: Category, posts: list<PostCard>}> $sections
+     * Каждая статья попадает в раздел своей основной категории, без повторов.
+     *
+     * @param list<Category> $categories
+     * @param array<int, list<PostCard>> $posts id категории => статьи, для которых она основная
      */
-    public function render(array $sections): string
+    public function render(array $categories, array $posts): string
     {
         $lines = ["# {$this->config->siteName}", '', '> ' . $this->inline($this->config->siteDescription), ''];
 
-        foreach ($sections as $section) {
-            $category = $section['category'];
+        foreach ($categories as $category) {
             $lines[] = '## ' . $this->inline($category->name);
             $lines[] = '';
             $lines[] = $this->link(
@@ -38,7 +40,7 @@ final class LlmsTxt
                 $this->urls->category($category->slug),
                 $category->description,
             );
-            foreach ($section['posts'] as $post) {
+            foreach ($posts[$category->id] ?? [] as $post) {
                 $lines[] = $this->link($post->title, $this->urls->post($post->slug), $post->description);
             }
             $lines[] = '';
