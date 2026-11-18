@@ -7,6 +7,13 @@
 - `docker compose up -d --build` - сайт на http://localhost:8080 (порт - `APP_PORT`).
 - Код монтируется в контейнер, правки видны сразу; скомпилированные шаблоны Smarty лежат в томе `var`.
 
+## Тесты и анализ
+- `docker compose exec php composer test` - PHPUnit; один набор: `composer test -- --testsuite unit`.
+- `docker compose exec php composer analyse` - PHPStan, уровень max, без baseline.
+- `tests/Unit` - классы и шаблоны по отдельности, `tests/Functional` - приложение целиком через `App::handle()` без HTTP,
+  `tests/Integration` - с MySQL (появятся вместе с базой).
+- CI (`.github/workflows/ci.yml`): `composer validate --strict`, PHPStan и PHPUnit на PHP 8.1 и 8.5 - на push в `main` и в pull request.
+
 ## Структура
 - `public/index.php` - единственная точка входа, nginx отдаёт в неё всё, кроме статики.
 - `src/Core` - ядро: `App` (маршруты и обработка запроса), `Router`, `Request`, `Response`, `View` (Smarty), `Meta` (SEO), `Config`.
