@@ -6,6 +6,9 @@ namespace App\Core;
 
 final class Meta
 {
+    /**
+     * @param list<array<string, mixed>> $schema
+     */
     public function __construct(
         public readonly ?string $title = null,
         public readonly string $description = '',

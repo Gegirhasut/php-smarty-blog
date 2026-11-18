@@ -24,6 +24,9 @@ final class View
         $this->smarty->assign($name, $value);
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
     public function render(string $template, array $data = []): string
     {
         $tpl = $this->smarty->createTemplate($template);

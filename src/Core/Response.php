@@ -6,6 +6,9 @@ namespace App\Core;
 
 final class Response
 {
+    /**
+     * @param array<string, string> $headers
+     */
     public function __construct(
         public readonly string $body,
         public readonly int $status = 200,

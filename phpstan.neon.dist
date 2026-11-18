@@ -1,0 +1,10 @@
+parameters:
+    level: max
+    paths:
+        - public
+        - src
+        - tests
+    tmpDir: var/phpstan
+    stubFiles:
+        # В Smarty у Template::fetch() тип mixed, хотя метод всегда возвращает строку
+        - tests/stubs/Smarty.stub

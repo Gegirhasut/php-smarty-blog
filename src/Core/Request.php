@@ -6,6 +6,9 @@ namespace App\Core;
 
 final class Request
 {
+    /**
+     * @param array<mixed> $query
+     */
     public function __construct(
         public readonly string $method,
         public readonly string $path,
@@ -15,11 +18,12 @@ final class Request
 
     public static function fromGlobals(): self
     {
-        $uri = $_SERVER['REQUEST_URI'] ?? '/';
+        $method = $_SERVER['REQUEST_METHOD'] ?? null;
+        $uri = $_SERVER['REQUEST_URI'] ?? null;
 
         return new self(
-            method: $_SERVER['REQUEST_METHOD'] ?? 'GET',
-            path: explode('?', $uri, 2)[0],
+            method: is_string($method) ? $method : 'GET',
+            path: is_string($uri) ? explode('?', $uri, 2)[0] : '/',
             query: $_GET,
         );
     }

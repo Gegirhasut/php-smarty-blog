@@ -1,0 +1,13 @@
+<?php
+
+namespace Smarty;
+
+class Template
+{
+    /**
+     * @return string
+     */
+    public function fetch()
+    {
+    }
+}

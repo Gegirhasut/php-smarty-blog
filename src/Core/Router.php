@@ -6,8 +6,12 @@ namespace App\Core;
 
 final class Router
 {
+    /** @var array<string, callable(Request, array<string, string>): Response> */
     private array $routes = [];
 
+    /**
+     * @param callable(Request, array<string, string>): Response $handler
+     */
     public function add(string $pattern, callable $handler): void
     {
         $this->routes[$pattern] = $handler;
@@ -26,6 +30,9 @@ final class Router
         throw new NotFoundException();
     }
 
+    /**
+     * @return array<string, string>|null
+     */
     private function match(string $pattern, string $path): ?array
     {
         $patternParts = explode('/', $pattern);
