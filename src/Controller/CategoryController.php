@@ -33,9 +33,10 @@ final class CategoryController
     public function show(Request $request, string $slug): Response
     {
         $category = $this->categories->findBySlug($slug) ?? throw new NotFoundException();
-        $query = ListingQuery::parse($request->query);
+        // Мусорные sort и page - 404, а не первая страница: иначе у каждого такого адреса был бы дубль с кодом 200
+        $query = ListingQuery::parse($request->query) ?? throw new NotFoundException();
 
-        if (!$query->isCanonical($request->query)) {
+        if (!$query->isCanonical) {
             return Response::redirect($this->urls->category($category->slug, $query));
         }
 

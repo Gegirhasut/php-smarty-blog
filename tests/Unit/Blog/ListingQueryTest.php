@@ -6,7 +6,6 @@ namespace App\Tests\Unit\Blog;
 
 use App\Blog\ListingQuery;
 use App\Blog\Sort;
-use App\Core\NotFoundException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -16,6 +15,7 @@ final class ListingQueryTest extends TestCase
     {
         $query = ListingQuery::parse(['utm_source' => 'mail']);
 
+        self::assertNotNull($query);
         self::assertSame(Sort::Date, $query->sort);
         self::assertSame(1, $query->page);
     }
@@ -24,6 +24,7 @@ final class ListingQueryTest extends TestCase
     {
         $query = ListingQuery::parse(['sort' => 'views', 'page' => '3']);
 
+        self::assertNotNull($query);
         self::assertSame(Sort::Views, $query->sort);
         self::assertSame(3, $query->page);
     }
@@ -59,9 +60,7 @@ final class ListingQueryTest extends TestCase
     #[DataProvider('invalidQueries')]
     public function testRejectsInvalidValues(array $params): void
     {
-        $this->expectException(NotFoundException::class);
-
-        ListingQuery::parse($params);
+        self::assertNull(ListingQuery::parse($params));
     }
 
     /**
@@ -87,7 +86,7 @@ final class ListingQueryTest extends TestCase
     #[DataProvider('canonicalQueries')]
     public function testDefaultValuesInAddressAreNotCanonical(array $params, bool $canonical): void
     {
-        self::assertSame($canonical, ListingQuery::parse($params)->isCanonical($params));
+        self::assertSame($canonical, ListingQuery::parse($params)?->isCanonical);
     }
 
     public function testAddressParamsSkipDefaults(): void
