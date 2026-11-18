@@ -6,6 +6,9 @@
 ## Запуск
 - `docker compose up -d --build` - сайт на http://localhost:8080 (порт - `APP_PORT`).
 - Код монтируется в контейнер, правки видны сразу; скомпилированные шаблоны Smarty лежат в томе `var`.
+- Стили: сервис `sass` (dart-sass из стадии `sass` в `Dockerfile`) собирает `assets/scss/app.scss` в `public/assets/css/app.css`
+  и пересобирает при каждом изменении; nginx стартует после первой сборки. Собранный CSS в git не попадает.
+  Ошибка в SCSS - в `docker compose logs sass`.
 - `docker compose exec php php bin/seed.php --fresh` - пересоздать таблицы по `database/schema.sql` и заполнить базу из `database/seeds/`.
   Схема применяется целиком, изменения - через `--fresh`, данные учебные (миграций нет).
 - Тестовая база `blog_test` создаётся скриптом из `docker/mysql/init` при первом создании тома MySQL;
@@ -21,7 +24,8 @@
   фикстуры - `insertCategory()` и `insertPost()` (первая категория в списке - основная). `$rollBack = true` ведёт тест
   в транзакции с откатом - так работают тесты репозиториев и страниц. Функциональные без базы (`AppTest`) проверяют,
   что соединение не открывается. Части страниц тесты ищут по смыслу разметки (`aria-label`, заголовки), а не по CSS-классам.
-- CI (`.github/workflows/ci.yml`): `composer validate --strict`, PHPStan и PHPUnit на PHP 8.1 и 8.5 - на push в `main` и в pull request.
+- CI (`.github/workflows/ci.yml`): `composer validate --strict`, PHPStan и PHPUnit на PHP 8.1 и 8.5, отдельной задачей - сборка SCSS
+  стадией `sass` из `Dockerfile`; на push в `main` и в pull request.
 
 ## Маршруты
 - `/` - главная: категории со статьями, в каждой три последние статьи и ссылка «Все статьи».
@@ -44,8 +48,13 @@
 - `src/Blog` - предметная область без SQL и HTTP: сущности `Category`, `PostCard` (статья в списках) и `Post` (статья целиком),
   `Slug`, `Sort` и `ListingQuery` (разбор `sort`/`page`), `ArticleText` (текст статьи на блоки), `Urls` (схема адресов).
 - `src/Seo` - `Meta` и `PageMeta` (мета-теги, хлебные крошки и JSON-LD страниц), `Sitemap`, `RssFeed`, `LlmsTxt`.
-- `templates` - Smarty: `layout.tpl` и шаблоны страниц, общие куски в `partials/` (карточка, обложка, пагинация, крошки), ошибки в `errors/`.
-- `Dockerfile` и `docker/nginx` - окружение для разработки; образ для демо появится на этапе 6.
+- `templates` - Smarty: `layout.tpl` и шаблоны страниц, общие куски в `partials/` (карточка, обложка, пагинация, крошки,
+  иконки), ошибки в `errors/`.
+- `assets/scss` - стили: `abstracts` (брейкпоинты, миксины), `base` (шрифт, CSS-переменные темы, сброс), `layout`,
+  `components` (BEM-блоки), `pages`. `public/assets` - шрифты, картинки оформления и собранный CSS; в корне `public` -
+  favicon, иконки для телефона, `site.webmanifest` и `og.jpg`.
+- `Dockerfile` (стадия `sass` - сборщик стилей, последняя - PHP для разработки) и `docker/nginx` - окружение для разработки;
+  образ для демо появится на этапе 6.
 
 ## Правила кода
 - `declare(strict_types=1)`, типы везде, `final` и `readonly` где уместно.
@@ -59,6 +68,11 @@
 - Вывод в шаблонах экранируется по умолчанию; `nofilter` - только для заранее безопасных данных (JSON-LD).
   Текст статьи не HTML: `ArticleText` делит его на блоки, теги строит шаблон.
 - Smarty - только для HTML. XML (sitemap, RSS) собирает `XMLWriter`, текст (robots, llms) - PHP: HTML-экранирование испортило бы их.
+- Файлы оформления из `public/assets` подключаются через модификатор `asset` (`{'/assets/css/app.css'|asset}`): он дописывает
+  `?v=` со временем изменения, а nginx отдаёт `/assets/` с кэшем на год. Шрифты из CSS - без версии, их файлы не меняются.
+- Вёрстка: mobile-first, классы по BEM, без CSS-фреймворков; текущий пункт меню, сортировки и страницы стилизуется по `aria-current`.
+  Иконки - только Lucide (ISC) через `partials/icon.tpl`, иконка категории - по slug в `partials/category-icon.tpl`.
+  Картинки и графику не рисовать кодом - их заказывает владелец.
 - Комментарии только там, где неочевидно «почему». Комментарии и тексты для пользователя - на русском.
 - Простота важнее «энтерпрайзности»: не добавлять слои и абстракции без реальной нужды.
 
