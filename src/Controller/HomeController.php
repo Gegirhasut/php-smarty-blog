@@ -18,7 +18,7 @@ final class HomeController
     {
         return new Response($this->view->render('home.tpl', [
             'meta' => new Meta(
-                description: 'Статьи о технологиях, путешествиях и еде.',
+                description: 'Блог об ИИ: новые модели и инструменты, агенты, исследования, деньги и люди.',
                 canonical: '/',
             ),
         ]));
