@@ -66,8 +66,7 @@ COPY --from=sass /app/app.css public/assets/css/app.css
 RUN install -d -o www-data -g www-data var
 
 ENV APP_ENV=prod \
-    DB_HOST=127.0.0.1 \
-    DB_PORT=3306 \
+    DB_HOST=localhost \
     DB_NAME=blog \
     DB_USER=blog
 
