@@ -6,6 +6,8 @@
     --color-primary-hover: #2e1fbd;
     --color-primary-soft: #eeecfd;
     --color-primary-line: #dcd8fb;
+    // Текст на заливке primary и accent-strong
+    --color-on-primary: #fff;
     // Коралловый - акцент для мелочей. Под белым текстом он темнее: так у кнопки контраст AA
     --color-accent: #ff6b4a;
     --color-accent-strong: #cf4428;
@@ -14,17 +16,21 @@
     --color-text: #1b1640;
     --color-text-soft: #3d3960;
     --color-muted: #5f5c78;
+    // Только для оформления (разделители), не для текста: контраст ниже AA
+    --color-faint: #a9a6c0;
     --color-line: #e7e5f3;
     --color-bg: #f7f7fc;
     --color-surface: #fff;
 
     --radius-sm: 10px;
+    --radius-md: 12px;
     --radius: 14px;
     --radius-lg: 20px;
     --radius-pill: 999px;
 
     --shadow: 0 1px 2px rgb(27 22 64 / 5%), 0 6px 20px rgb(27 22 64 / 6%);
     --shadow-hover: 0 2px 4px rgb(27 22 64 / 6%), 0 14px 32px rgb(59 43 217 / 14%);
+    --shadow-accent: 0 8px 20px rgb(207 68 40 / 25%);
 
     --font: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 

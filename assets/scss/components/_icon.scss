@@ -24,7 +24,7 @@
     &--lg {
         width: 64px;
         height: 64px;
-        border-radius: 18px;
+        border-radius: var(--radius-lg);
     }
 
     &--sm {

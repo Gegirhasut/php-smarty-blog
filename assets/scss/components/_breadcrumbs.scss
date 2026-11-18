@@ -15,7 +15,7 @@
         & + &::before {
             margin-inline: 8px;
             content: "/" / "";
-            color: #a9a6c0;
+            color: var(--color-faint);
         }
 
         // Длинное название статьи обрезается многоточием

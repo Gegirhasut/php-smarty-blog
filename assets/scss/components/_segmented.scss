@@ -22,7 +22,7 @@
         }
 
         &[aria-current] {
-            color: #fff;
+            color: var(--color-on-primary);
             background: var(--color-primary);
         }
     }

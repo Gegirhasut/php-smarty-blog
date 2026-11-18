@@ -129,7 +129,7 @@
         margin-inline: -6px;
         font-weight: 600;
         color: var(--color-text);
-        border-radius: 12px;
+        border-radius: var(--radius-md);
         transition: background-color 0.2s, color 0.2s;
 
         &:hover {
