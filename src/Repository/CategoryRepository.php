@@ -35,6 +35,20 @@ final class CategoryRepository
         return $statement->fetchAll();
     }
 
+    /**
+     * @return Category|null
+     */
+    public function findBySlug(string $slug): ?array
+    {
+        $statement = $this->pdo->prepare('SELECT id, slug, name, description FROM categories WHERE slug = ?');
+        $statement->execute([$slug]);
+
+        /** @var Category|false $category */
+        $category = $statement->fetch();
+
+        return $category === false ? null : $category;
+    }
+
     public function count(): int
     {
         $statement = $this->pdo->prepare('SELECT COUNT(*) FROM categories');

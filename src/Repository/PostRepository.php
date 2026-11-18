@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Blog\Sort;
 use PDO;
 
 /**
@@ -90,6 +91,43 @@ final class PostRepository
         }
 
         return array_values($sections);
+    }
+
+    public function countInCategory(int $categoryId): int
+    {
+        $statement = $this->pdo->prepare('SELECT COUNT(*) FROM category_post WHERE category_id = ?');
+        $statement->execute([$categoryId]);
+
+        /** @var int */
+        return $statement->fetchColumn();
+    }
+
+    /**
+     * Страница статей категории. При равных датах или просмотрах порядок задаёт id,
+     * иначе такие статьи могли бы переезжать между страницами от запроса к запросу.
+     *
+     * @return list<PostCard>
+     */
+    public function inCategory(int $categoryId, Sort $sort, int $limit, int $offset): array
+    {
+        // ORDER BY не принимает параметры запроса, поэтому сортировка выбирается из готовых строк
+        $order = match ($sort) {
+            Sort::Date => 'p.published_at DESC, p.id DESC',
+            Sort::Views => 'p.views DESC, p.id DESC',
+        };
+
+        $statement = $this->pdo->prepare(
+            "SELECT p.id, p.slug, p.title, p.description, p.image, p.views, p.published_at
+             FROM posts p
+             JOIN category_post cp ON cp.post_id = p.id
+             WHERE cp.category_id = ?
+             ORDER BY {$order}
+             LIMIT ? OFFSET ?",
+        );
+        $statement->execute([$categoryId, $limit, $offset]);
+
+        /** @var list<PostCard> */
+        return $statement->fetchAll();
     }
 
     /**

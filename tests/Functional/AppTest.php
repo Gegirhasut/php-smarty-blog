@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Tests\TempDir;
 use PDO;
 use PDOException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -14,16 +15,19 @@ use PHPUnit\Framework\TestCase;
  */
 final class AppTest extends TestCase
 {
+    private TempDir $root;
     private Site $site;
 
     protected function setUp(): void
     {
-        $this->site = new Site(fn (): PDO => self::fail('Соединение с базой открывать не нужно'));
+        $this->root = Site::root();
+        $this->site = new Site($this->root, fn (): PDO => self::fail('Соединение с базой открывать не нужно'));
     }
 
     protected function tearDown(): void
     {
-        $this->site->remove();
+        $this->site->close();
+        $this->root->remove();
     }
 
     /**
@@ -55,6 +59,7 @@ final class AppTest extends TestCase
     {
         return [
             'главная' => ['/'],
+            'категория' => ['/category/tools'],
             'неизвестная страница' => ['/missing'],
         ];
     }
@@ -71,7 +76,7 @@ final class AppTest extends TestCase
 
     public function testBrokenNotFoundPageBecomesServerError(): void
     {
-        unlink($this->site->root->path . '/templates/errors/404.tpl');
+        unlink($this->root->path . '/templates/errors/404.tpl');
 
         $response = $this->site->get('/missing');
 
@@ -82,31 +87,25 @@ final class AppTest extends TestCase
 
     public function testServerErrorHidesDetailsInProduction(): void
     {
-        $site = new Site(fn (): PDO => throw new PDOException('Connection refused'));
+        $site = new Site($this->root, fn (): PDO => throw new PDOException('Connection refused'));
 
-        try {
-            $response = $site->get('/');
+        $response = $site->get('/');
+        $site->close();
 
-            self::assertSame(500, $response->status);
-            self::assertStringContainsString('<h1>Что-то пошло не так</h1>', $response->body);
-            self::assertStringNotContainsString('Connection refused', $response->body);
-            self::assertStringContainsString('Connection refused', $site->errorLog());
-        } finally {
-            $site->remove();
-        }
+        self::assertSame(500, $response->status);
+        self::assertStringContainsString('<h1>Что-то пошло не так</h1>', $response->body);
+        self::assertStringNotContainsString('Connection refused', $response->body);
+        self::assertStringContainsString('Connection refused', $site->errorLog());
     }
 
     public function testServerErrorShowsDetailsInDevelopment(): void
     {
-        $site = new Site(fn (): PDO => throw new PDOException('Connection refused'), debug: true);
+        $site = new Site($this->root, fn (): PDO => throw new PDOException('Connection refused'), debug: true);
 
-        try {
-            $response = $site->get('/');
+        $response = $site->get('/');
+        $site->close();
 
-            self::assertSame(500, $response->status);
-            self::assertStringContainsString('Connection refused', $response->body);
-        } finally {
-            $site->remove();
-        }
+        self::assertSame(500, $response->status);
+        self::assertStringContainsString('Connection refused', $response->body);
     }
 }

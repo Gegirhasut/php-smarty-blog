@@ -16,6 +16,14 @@ final class Response
     ) {
     }
 
+    /**
+     * Постоянный редирект: поисковики переносят адрес в индексе на новый.
+     */
+    public static function redirect(string $url): self
+    {
+        return new self('', 301, ['Location' => $url]);
+    }
+
     public function send(): void
     {
         http_response_code($this->status);

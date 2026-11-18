@@ -7,6 +7,9 @@
     {if $meta->description}
         <meta name="description" content="{$meta->description}">
     {/if}
+    {if $meta->robots}
+        <meta name="robots" content="{$meta->robots}">
+    {/if}
     {if $meta->canonical}
         <link rel="canonical" href="{$site.url}{$meta->canonical}">
         <meta property="og:type" content="{$meta->ogType}">
@@ -46,6 +49,9 @@
     </header>
 
     <main class="main">
+        {if $meta->breadcrumbs}
+            {include "partials/breadcrumbs.tpl" breadcrumbs=$meta->breadcrumbs}
+        {/if}
         {block "content"}{/block}
     </main>
 

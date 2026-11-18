@@ -99,6 +99,28 @@ final class LayoutTest extends TestCase
         self::assertSame(0, $this->render(new Meta())->count('//nav'));
     }
 
+    public function testRendersRobotsOnlyWhenSet(): void
+    {
+        self::assertSame(0, $this->render(new Meta(canonical: '/'))->count('//meta[@name="robots"]'));
+        self::assertSame(
+            'noindex, follow',
+            $this->render(new Meta(canonical: '/', robots: 'noindex, follow'))->attribute('//meta[@name="robots"]', 'content'),
+        );
+    }
+
+    public function testRendersBreadcrumbsWithCurrentPageLast(): void
+    {
+        $page = $this->render(new Meta(breadcrumbs: [
+            ['name' => 'Главная', 'url' => '/'],
+            ['name' => 'Инструменты', 'url' => '/category/tools'],
+            ['name' => 'Статья <b>', 'url' => '/post/article'],
+        ]));
+
+        self::assertSame(['Главная', 'Инструменты', 'Статья <b>'], $page->texts('//main/nav//li'));
+        self::assertSame(['/', '/category/tools'], $page->attributes('//main/nav//a', 'href'));
+        self::assertSame(['Статья <b>'], $page->texts('//main/nav//*[@aria-current="page"]'));
+    }
+
     /**
      * @param array<string, mixed> $data
      */

@@ -30,4 +30,16 @@ final class CategoryRepositoryTest extends DatabaseTestCase
             ['id' => $agents, 'slug' => 'agents', 'name' => 'Агенты'],
         ], $this->categories->withPosts());
     }
+
+    public function testFindsCategoryBySlug(): void
+    {
+        $id = $this->insertCategory('tools', 'Инструменты', 'Обзоры сервисов.');
+
+        self::assertSame(
+            ['id' => $id, 'slug' => 'tools', 'name' => 'Инструменты', 'description' => 'Обзоры сервисов.'],
+            $this->categories->findBySlug('tools'),
+        );
+        self::assertNull($this->categories->findBySlug('Tools'));
+        self::assertNull($this->categories->findBySlug('missing'));
+    }
 }

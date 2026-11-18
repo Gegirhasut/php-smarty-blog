@@ -17,18 +17,31 @@ use PDO;
  */
 final class Site
 {
-    public readonly TempDir $root;
     private readonly string $previousErrorLog;
 
     /**
+     * @param TempDir $root корень сайта из root()
      * @param Closure(): PDO $connect
      */
-    public function __construct(private readonly Closure $connect, private readonly bool $debug = false)
+    public function __construct(
+        private readonly TempDir $root,
+        private readonly Closure $connect,
+        private readonly bool $debug = false,
+    ) {
+        @unlink($this->errorLogFile());
+        $this->previousErrorLog = (string) ini_set('error_log', $this->errorLogFile());
+    }
+
+    /**
+     * Копия шаблонов во временной папке: скомпилированные шаблоны не смешиваются с запущенным сайтом,
+     * а тест может испортить шаблон, не трогая настоящий.
+     */
+    public static function root(): TempDir
     {
-        // Отдельный корень, чтобы тесты не делили скомпилированные шаблоны с запущенным сайтом
-        $this->root = new TempDir();
-        $this->root->copy(dirname(__DIR__, 2) . '/templates', 'templates');
-        $this->previousErrorLog = (string) ini_set('error_log', $this->root->path . '/error.log');
+        $root = new TempDir();
+        $root->copy(dirname(__DIR__, 2) . '/templates', 'templates');
+
+        return $root;
     }
 
     public function get(string $url): Response
@@ -47,12 +60,16 @@ final class Site
 
     public function errorLog(): string
     {
-        return (string) @file_get_contents($this->root->path . '/error.log');
+        return (string) @file_get_contents($this->errorLogFile());
     }
 
-    public function remove(): void
+    public function close(): void
     {
         ini_set('error_log', $this->previousErrorLog);
-        $this->root->remove();
+    }
+
+    private function errorLogFile(): string
+    {
+        return $this->root->path . '/error.log';
     }
 }

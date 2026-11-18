@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core;
 
 use App\Blog\PageMeta;
+use App\Controller\CategoryController;
 use App\Controller\HomeController;
 use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
@@ -43,6 +44,12 @@ final class App
             $this->categories(),
             $this->posts(),
         ))->index());
+        $this->router->add('/category/{slug}', fn (Request $request, array $params): Response => (new CategoryController(
+            $this->view,
+            $meta,
+            $this->categories(),
+            $this->posts(),
+        ))->show($request, $params['slug']));
     }
 
     public function handle(Request $request): Response

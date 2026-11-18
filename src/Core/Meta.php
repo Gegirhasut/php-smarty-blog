@@ -7,14 +7,17 @@ namespace App\Core;
 final class Meta
 {
     /**
+     * @param list<array{name: string, url: string}> $breadcrumbs путь от главной до текущей страницы включительно
      * @param list<array<string, mixed>> $schema
      */
     public function __construct(
         public readonly ?string $title = null,
         public readonly string $description = '',
         public readonly ?string $canonical = null,
+        public readonly ?string $robots = null,
         public readonly string $ogType = 'website',
         public readonly ?string $image = null,
+        public readonly array $breadcrumbs = [],
         public readonly array $schema = [],
     ) {
     }
