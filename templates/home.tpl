@@ -21,9 +21,8 @@
                     <span class="section__icon icon-tile">{include "partials/category-icon.tpl" slug=$category->slug}</span>
                     <h2 class="section__title" id="category-{$category->slug}">{$category->name}</h2>
                     <p class="section__description">{$category->description}</p>
-                    {* У всех ссылок «Все статьи» одинаковый текст, aria-label говорит, куда ведёт каждая.
-                       На телефоне видна только стрелка: с подписью шапка секции не помещается в ширину *}
-                    <a class="section__more button button--light button--small" href="{$urls->category($category->slug)}" aria-label="Все статьи: {$category->name}"><span class="section__more-label">Все статьи</span>{include "partials/icon.tpl" name="arrow-right"}</a>
+                    {* У всех ссылок «Все статьи» одинаковый текст, aria-label говорит, куда ведёт каждая *}
+                    <a class="section__more button button--light button--small" href="{$urls->category($category->slug)}" aria-label="Все статьи: {$category->name}">Все статьи{include "partials/icon.tpl" name="arrow-right"}</a>
                 </header>
                 <div class="cards cards--row">
                     {foreach $section.posts as $post}
