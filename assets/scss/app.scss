@@ -13,5 +13,9 @@
 @use "components/button";
 @use "components/card";
 @use "components/post-info";
+@use "components/breadcrumbs";
+@use "components/segmented";
+@use "components/pagination";
 
 @use "pages/home";
+@use "pages/category";

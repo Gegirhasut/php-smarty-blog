@@ -1,0 +1,41 @@
+.breadcrumbs {
+    margin-block: 20px 16px;
+    font-size: 0.875rem;
+    color: var(--color-muted);
+
+    &__list {
+        display: flex;
+        min-width: 0;
+    }
+
+    &__item {
+        white-space: nowrap;
+
+        // Разделитель - оформление: альтернативный текст после «/» пустой, читалка его не произносит
+        & + &::before {
+            margin-inline: 8px;
+            content: "/" / "";
+            color: #a9a6c0;
+        }
+
+        // Длинное название статьи обрезается многоточием
+        &:last-child {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    &__link {
+        color: inherit;
+
+        &:hover {
+            color: var(--color-primary);
+            text-decoration: underline;
+        }
+    }
+
+    &__current {
+        color: var(--color-text);
+    }
+}

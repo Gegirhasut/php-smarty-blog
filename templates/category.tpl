@@ -2,11 +2,12 @@
 
 {block "content"}
     <header class="page-header">
+        <span class="page-header__icon icon-tile icon-tile--lg">{include "partials/category-icon.tpl" slug=$category->slug}</span>
         <h1 class="page-header__title">{$category->name}</h1>
         <p class="page-header__description">{$category->description}</p>
-        <nav class="sort" aria-label="Сортировка статей">
+        <nav class="page-header__sort segmented" aria-label="Сортировка статей">
             {foreach $sorts as $sort}
-                <a class="sort__link" href="{$sort.url}"{if $sort.current} aria-current="true"{/if}>{$sort.label}</a>
+                <a class="segmented__item" href="{$sort.url}"{if $sort.current} aria-current="true"{/if}>{$sort.label}</a>
             {/foreach}
         </nav>
     </header>

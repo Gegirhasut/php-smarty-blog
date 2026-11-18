@@ -1,0 +1,82 @@
+@use "../abstracts" as *;
+
+.pagination {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    margin-top: clamp(32px, 4vw, 48px);
+
+    // Номера переносятся на вторую строку, если не помещаются (на телефоне при десятке страниц), стрелки остаются по краям
+    &__list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: center;
+        min-width: 0;
+
+        @include from(sm) {
+            gap: 8px;
+        }
+    }
+
+    &__link,
+    &__arrow {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        min-width: 40px;
+        height: 40px;
+        font-weight: 700;
+        color: var(--color-text);
+        background: var(--color-surface);
+        border: 1px solid var(--color-line);
+        border-radius: 12px;
+        transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+
+        &:hover {
+            color: var(--color-primary);
+            border-color: var(--color-primary-line);
+        }
+
+        @include from(sm) {
+            min-width: 44px;
+            height: 44px;
+        }
+    }
+
+    &__link[aria-current] {
+        color: #fff;
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+    }
+
+    &__arrow {
+        flex: none;
+        color: var(--color-primary);
+
+        .icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        @include from(sm) {
+            padding-inline: 18px;
+        }
+    }
+
+    // На телефоне у стрелок нет подписи: иначе ряд не помещается
+    &__label {
+        @include until(sm) {
+            @include visually-hidden;
+        }
+    }
+
+    &__gap {
+        display: inline-block;
+        min-width: 20px;
+        color: var(--color-muted);
+        text-align: center;
+    }
+}

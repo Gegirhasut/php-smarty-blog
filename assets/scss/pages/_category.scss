@@ -1,0 +1,56 @@
+@use "../abstracts" as *;
+
+// Заголовок категории. На телефоне иконка с названием, под ними описание и сортировка во всю ширину;
+// с 1024px сортировка встаёт справа от названия, описание - отдельной строкой; с 1280px, как у секций главной,
+// всё в один ряд: иконка, название, описание за чертой и сортировка. Раньше описанию не хватает места
+.page-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px 16px;
+    align-items: center;
+    margin-bottom: clamp(24px, 3vw, 32px);
+
+    @include from(md) {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        column-gap: 24px;
+    }
+
+    @include from(lg) {
+        grid-template-columns: auto auto minmax(18rem, 1fr) auto;
+    }
+
+    &__title {
+        font-size: clamp(1.75rem, 1.3rem + 1.8vw, 2.75rem);
+    }
+
+    &__description {
+        grid-column: 1 / -1;
+        max-width: 46rem;
+        color: var(--color-muted);
+
+        @include from(lg) {
+            grid-column: auto;
+            padding-left: 24px;
+            border-left: 1px solid var(--color-line);
+        }
+    }
+
+    &__sort {
+        grid-column: 1 / -1;
+        margin-top: 4px;
+
+        @include from(sm) {
+            justify-self: start;
+        }
+
+        @include from(md) {
+            grid-row: 1;
+            grid-column: 3;
+            margin-top: 0;
+        }
+
+        @include from(lg) {
+            grid-column: 4;
+        }
+    }
+}

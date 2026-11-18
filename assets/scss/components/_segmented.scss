@@ -1,0 +1,29 @@
+// Переключатель «Новые | Популярные»: ссылки, текущая отмечена aria-current
+.segmented {
+    display: flex;
+    padding: 4px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-pill);
+
+    &__item {
+        flex: 1;
+        padding: 8px 22px;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--color-text);
+        text-align: center;
+        white-space: nowrap;
+        border-radius: var(--radius-pill);
+        transition: color 0.2s, background-color 0.2s;
+
+        &:hover {
+            color: var(--color-primary);
+        }
+
+        &[aria-current] {
+            color: #fff;
+            background: var(--color-primary);
+        }
+    }
+}
