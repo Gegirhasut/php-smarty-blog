@@ -1,0 +1,13 @@
+# В контекст сборки - только то, что копирует образ демо
+*
+!assets
+!bin
+!composer.json
+!composer.lock
+!database
+!docker
+!public
+!src
+!templates
+public/assets/css
+public/uploads

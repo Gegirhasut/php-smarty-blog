@@ -1,0 +1,15 @@
+# Демо на Render: Dashboard → New → Blueprint → этот репозиторий.
+# Один контейнер «всё в одном» (docker/demo): nginx, php-fpm и MySQL; база заполняется сидером при каждом старте.
+# Адрес сайта для canonical, sitemap и RSS образ берёт из RENDER_EXTERNAL_URL, свой домен - через APP_URL
+services:
+  - type: web
+    name: agentura-blog
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./docker/demo/Dockerfile
+    dockerContext: .
+    healthCheckPath: /
+    envVars:
+      - key: APP_ENV
+        value: prod

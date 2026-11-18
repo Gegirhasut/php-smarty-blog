@@ -79,3 +79,23 @@ jobs:
         run: |
           docker build --target sass -t blog-sass .
           docker run --rm -v "$PWD/assets:/app/assets:ro" blog-sass sass --no-source-map --style=compressed assets/scss/app.scss /tmp/app.css
+
+  demo:
+    name: Образ демо
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Сборка образа «всё в одном»
+        run: docker build -f docker/demo/Dockerfile -t blog-demo .
+
+      # Контейнер поднимает MySQL, засевает базу и запускает сайт: главная должна ответить 200
+      - name: Сайт отвечает
+        run: |
+          docker run -d --name demo -p 8080:10000 blog-demo
+          for i in $(seq 60); do
+            curl -sf -o /dev/null http://localhost:8080/ && exit 0
+            sleep 1
+          done
+          docker logs demo
+          exit 1
