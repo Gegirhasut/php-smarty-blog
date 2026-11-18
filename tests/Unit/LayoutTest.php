@@ -125,9 +125,9 @@ final class LayoutTest extends TestCase
             ['name' => 'Статья <b>', 'url' => '/post/article'],
         ]));
 
-        self::assertSame(['Главная', 'Инструменты', 'Статья <b>'], $page->texts('//main/nav//li'));
-        self::assertSame(['/', '/category/tools'], $page->attributes('//main/nav//a', 'href'));
-        self::assertSame(['Статья <b>'], $page->texts('//main/nav//*[@aria-current="page"]'));
+        self::assertSame(['Главная', 'Инструменты', 'Статья <b>'], $page->texts('//nav[@aria-label="Хлебные крошки"]//li'));
+        self::assertSame(['/', '/category/tools'], $page->attributes('//nav[@aria-label="Хлебные крошки"]//a', 'href'));
+        self::assertSame(['Статья <b>'], $page->texts('//nav[@aria-label="Хлебные крошки"]//*[@aria-current="page"]'));
     }
 
     /**

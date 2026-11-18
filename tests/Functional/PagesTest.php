@@ -18,6 +18,13 @@ use PHPUnit\Framework\Attributes\DataProvider;
  */
 final class PagesTest extends DatabaseTestCase
 {
+    // Части страниц ищутся по смыслу разметки, а не по CSS-классам: классы поменяются при вёрстке
+    private const BREADCRUMBS = '//nav[@aria-label="Хлебные крошки"]//li';
+    private const SORT = '//nav[@aria-label="Сортировка статей"]';
+    private const PAGINATION = '//nav[@aria-label="Страницы"]';
+    // Статья на своей странице, в отличие от карточек похожих статей, - с заголовком h1
+    private const POST = '//main//article[header/h1]';
+
     // Приложение работает с тем же соединением и видит фикстуры из незакоммиченной транзакции
     protected bool $rollBack = true;
 
@@ -84,7 +91,7 @@ final class PagesTest extends DatabaseTestCase
         $page = $this->page($this->site->get('/'));
 
         self::assertSame(0, $page->count('//header//nav'));
-        self::assertSame(['Статей пока нет.'], $page->texts('//main//p[@class="empty"]'));
+        self::assertSame(1, $page->count('//main//p[.="Статей пока нет."]'));
     }
 
     public function testHeadIsHandledLikeGet(): void
@@ -102,17 +109,17 @@ final class PagesTest extends DatabaseTestCase
         $page = $this->page($this->site->get('/category/tools'));
 
         self::assertSame('Инструменты', $page->text('//h1'));
-        self::assertSame(['Главная', 'Инструменты'], $page->texts('//main/nav[@class="breadcrumbs"]//li'));
+        self::assertSame(['Главная', 'Инструменты'], $page->texts(self::BREADCRUMBS));
         // Девять на странице, сначала новые
         self::assertSame(
             ['/post/post-10', '/post/post-9', '/post/post-8', '/post/post-7', '/post/post-6',
                 '/post/post-5', '/post/post-4', '/post/post-3', '/post/post-2'],
             $page->attributes('//main//article//h2/a', 'href'),
         );
-        self::assertSame(['Новые'], $page->texts('//nav[@class="sort"]/a[@aria-current]'));
-        self::assertSame(['/category/tools', '/category/tools?sort=views'], $page->attributes('//nav[@class="sort"]/a', 'href'));
-        self::assertSame(['1'], $page->texts('//nav[@class="pagination"]//a[@aria-current="page"]'));
-        self::assertSame('/category/tools?page=2', $page->attribute('//nav[@class="pagination"]//a[@rel="next"]', 'href'));
+        self::assertSame(['Новые'], $page->texts(self::SORT . '/a[@aria-current]'));
+        self::assertSame(['/category/tools', '/category/tools?sort=views'], $page->attributes(self::SORT . '/a', 'href'));
+        self::assertSame(['1'], $page->texts(self::PAGINATION . '//a[@aria-current="page"]'));
+        self::assertSame('/category/tools?page=2', $page->attribute(self::PAGINATION . '//a[@rel="next"]', 'href'));
         self::assertSame('http://blog.test/category/tools', $page->attribute('//link[@rel="canonical"]', 'href'));
         self::assertSame(0, $page->count('//meta[@name="robots"]'));
         self::assertSame(['Инструменты'], $page->texts('//header//nav//a[@aria-current="page"]'));
@@ -128,8 +135,8 @@ final class PagesTest extends DatabaseTestCase
         self::assertSame(['/post/post-1'], $page->attributes('//main//article//h2/a', 'href'));
         self::assertSame('Инструменты, страница 2 — Агентура', $page->text('//title'));
         self::assertSame('http://blog.test/category/tools?page=2', $page->attribute('//link[@rel="canonical"]', 'href'));
-        self::assertSame('/category/tools', $page->attribute('//nav[@class="pagination"]//a[@rel="prev"]', 'href'));
-        self::assertSame(0, $page->count('//nav[@class="pagination"]//a[@rel="next"]'));
+        self::assertSame('/category/tools', $page->attribute(self::PAGINATION . '//a[@rel="prev"]', 'href'));
+        self::assertSame(0, $page->count(self::PAGINATION . '//a[@rel="next"]'));
     }
 
     public function testCategorySortedByViews(): void
@@ -140,8 +147,8 @@ final class PagesTest extends DatabaseTestCase
 
         // Просмотров больше у старых статей фикстуры
         self::assertSame('/post/post-1', $page->attribute('//main//article//h2/a', 'href'));
-        self::assertSame(['Популярные'], $page->texts('//nav[@class="sort"]/a[@aria-current]'));
-        self::assertSame('/category/tools?sort=views&page=2', $page->attribute('//nav[@class="pagination"]//a[@rel="next"]', 'href'));
+        self::assertSame(['Популярные'], $page->texts(self::SORT . '/a[@aria-current]'));
+        self::assertSame('/category/tools?sort=views&page=2', $page->attribute(self::PAGINATION . '//a[@rel="next"]', 'href'));
         self::assertSame('noindex, follow', $page->attribute('//meta[@name="robots"]', 'content'));
     }
 
@@ -151,8 +158,9 @@ final class PagesTest extends DatabaseTestCase
 
         $page = $this->page($this->site->get('/category/empty'));
 
-        self::assertSame(['В этой категории пока нет статей.'], $page->texts('//main//p[@class="empty"]'));
-        self::assertSame(0, $page->count('//nav[@class="pagination"]'));
+        self::assertSame(1, $page->count('//main//p[.="В этой категории пока нет статей."]'));
+        self::assertSame(0, $page->count('//main//article'));
+        self::assertSame(0, $page->count(self::PAGINATION));
     }
 
     public function testPostPage(): void
@@ -176,15 +184,15 @@ final class PagesTest extends DatabaseTestCase
         $page = $this->page($this->site->get('/post/main'));
 
         self::assertSame('Главная статья', $page->text('//h1'));
-        self::assertSame(['Главная', 'Инструменты', 'Главная статья'], $page->texts('//main/nav[@class="breadcrumbs"]//li'));
-        self::assertSame(['/category/tools', '/category/agents'], $page->attributes('//article//ul[@class="post__categories"]//a', 'href'));
-        self::assertSame(['Вступление.'], $page->texts('//div[@class="post__content"]/p'));
-        self::assertSame(['Раздел'], $page->texts('//div[@class="post__content"]/h2'));
-        self::assertSame(['первый пункт', 'второй пункт'], $page->texts('//div[@class="post__content"]/ul/li'));
+        self::assertSame(['Главная', 'Инструменты', 'Главная статья'], $page->texts(self::BREADCRUMBS));
+        self::assertSame(['/category/tools', '/category/agents'], $page->attributes(self::POST . '/header//a', 'href'));
+        self::assertSame(['Вступление.'], $page->texts(self::POST . '//p[not(ancestor::header)]'));
+        self::assertSame(['Раздел'], $page->texts(self::POST . '//h2'));
+        self::assertSame(['первый пункт', 'второй пункт'], $page->texts(self::POST . '//li[not(ancestor::header)]'));
         self::assertSame('high', $page->attribute('//article/img', 'fetchpriority'));
         // Похожие: больше общих категорий, затем новее
         self::assertSame(['/post/both', '/post/newer', '/post/older'], $page->attributes('//aside//article//h3/a', 'href'));
-        self::assertSame(['Инструменты', 'Агенты'], $page->texts('//aside//ul[@class="sidebar__list"]//a'));
+        self::assertSame(['Инструменты', 'Агенты'], $page->texts('//aside//section[h2="Категории"]//a'));
         self::assertSame('http://blog.test/post/main', $page->attribute('//link[@rel="canonical"]', 'href'));
         self::assertSame('article', $page->attribute('//meta[@property="og:type"]', 'content'));
         self::assertSame('http://blog.test/uploads/main.webp', $page->attribute('//meta[@property="og:image"]', 'content'));
@@ -218,7 +226,7 @@ final class PagesTest extends DatabaseTestCase
         $page = $this->page($this->site->get('/post/post'));
 
         self::assertSame(2000, $this->views('post'));
-        self::assertSame('Просмотры: 2 000', $page->text('//article//span[@class="post-info__views"]'));
+        self::assertSame('Просмотры: 2 000', $page->text(self::POST . '/header//span[span="Просмотры:"]'));
     }
 
     public function testSitemap(): void
