@@ -7,6 +7,7 @@ namespace App\Tests\Integration\Repository;
 use App\Blog\Sort;
 use App\Repository\PostRepository;
 use App\Tests\DatabaseTestCase;
+use PDO;
 
 final class PostRepositoryTest extends DatabaseTestCase
 {
@@ -103,6 +104,69 @@ final class PostRepositoryTest extends DatabaseTestCase
         self::assertSame(['newest', 'tie-second'], array_column($this->posts->inCategory($tools, Sort::Date, 2, 0), 'slug'));
         self::assertSame(['tie-first', 'oldest'], array_column($this->posts->inCategory($tools, Sort::Date, 2, 2), 'slug'));
         self::assertSame([], $this->posts->inCategory($tools, Sort::Date, 2, 4));
+    }
+
+    public function testFindsPostBySlug(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $id = $this->insertPost('first', [$tools], '2026-10-01 10:00:00', views: 5, title: 'Первая', content: "Текст.\n\n## Раздел");
+
+        self::assertSame([
+            'id' => $id,
+            'slug' => 'first',
+            'title' => 'Первая',
+            'description' => 'Описание статьи first.',
+            'image' => '/uploads/first.webp',
+            'views' => 5,
+            'published_at' => '2026-10-01 10:00:00',
+            'content' => "Текст.\n\n## Раздел",
+        ], $this->posts->findBySlug('first'));
+        self::assertNull($this->posts->findBySlug('First'));
+        self::assertNull($this->posts->findBySlug('missing'));
+    }
+
+    public function testIncrementsViewsOfOnePost(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $first = $this->insertPost('first', [$tools], views: 5);
+        $this->insertPost('second', [$tools], views: 5);
+
+        $this->posts->incrementViews($first);
+        $this->posts->incrementViews($first);
+
+        self::assertSame(
+            ['first' => 7, 'second' => 5],
+            $this->select('SELECT slug, views FROM posts ORDER BY id')->fetchAll(PDO::FETCH_KEY_PAIR),
+        );
+    }
+
+    public function testSimilarPostsShareMostCategoriesThenAreNewer(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $agents = $this->insertCategory('agents');
+        $money = $this->insertCategory('money');
+        $post = $this->insertPost('post', [$tools, $agents], '2026-10-01 10:00:00');
+        $this->insertPost('both-old', [$tools, $agents], '2026-09-01 10:00:00');
+        $this->insertPost('one-new', [$agents, $money], '2026-10-05 10:00:00');
+        $this->insertPost('one-tie-first', [$tools], '2026-10-03 10:00:00');
+        $this->insertPost('one-tie-second', [$tools], '2026-10-03 10:00:00');
+        $this->insertPost('unrelated', [$money], '2026-10-10 10:00:00');
+
+        self::assertSame(
+            ['both-old', 'one-new', 'one-tie-second'],
+            array_column($this->posts->similar($post, 3), 'slug'),
+        );
+        self::assertSame(
+            ['both-old', 'one-new', 'one-tie-second', 'one-tie-first'],
+            array_column($this->posts->similar($post, 10), 'slug'),
+        );
+    }
+
+    public function testPostWithoutNeighboursHasNoSimilar(): void
+    {
+        $post = $this->insertPost('alone', [$this->insertCategory('tools')]);
+
+        self::assertSame([], $this->posts->similar($post, 3));
     }
 
     /**

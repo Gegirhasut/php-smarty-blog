@@ -154,6 +154,72 @@ final class PagesTest extends DatabaseTestCase
         self::assertSame(0, $page->count('//nav[@class="pagination"]'));
     }
 
+    public function testPostPage(): void
+    {
+        $tools = $this->insertCategory('tools', 'Инструменты');
+        $agents = $this->insertCategory('agents', 'Агенты');
+        $this->insertCategory('empty', 'Пустая');
+        $this->insertPost('main', [$agents, $tools], '2026-10-09 16:33:00', title: 'Главная статья', content: <<<'TEXT'
+            Вступление.
+
+            ## Раздел
+
+            - первый пункт
+            - второй пункт
+            TEXT);
+        $this->insertPost('both', [$tools, $agents], '2026-09-01 10:00:00');
+        $this->insertPost('newer', [$tools], '2026-10-05 10:00:00');
+        $this->insertPost('older', [$agents], '2026-10-01 10:00:00');
+        $this->insertPost('oldest', [$agents], '2026-08-01 10:00:00');
+
+        $page = $this->page($this->site->get('/post/main'));
+
+        self::assertSame('Главная статья', $page->text('//h1'));
+        self::assertSame(['Главная', 'Инструменты', 'Главная статья'], $page->texts('//main/nav[@class="breadcrumbs"]//li'));
+        self::assertSame(['/category/tools', '/category/agents'], $page->attributes('//article//ul[@class="post__categories"]//a', 'href'));
+        self::assertSame(['Вступление.'], $page->texts('//div[@class="post__content"]/p'));
+        self::assertSame(['Раздел'], $page->texts('//div[@class="post__content"]/h2'));
+        self::assertSame(['первый пункт', 'второй пункт'], $page->texts('//div[@class="post__content"]/ul/li'));
+        self::assertSame('high', $page->attribute('//article/img', 'fetchpriority'));
+        // Похожие: больше общих категорий, затем новее
+        self::assertSame(['/post/both', '/post/newer', '/post/older'], $page->attributes('//aside//article//h3/a', 'href'));
+        self::assertSame(['Инструменты', 'Агенты'], $page->texts('//aside//ul[@class="sidebar__list"]//a'));
+        self::assertSame('http://blog.test/post/main', $page->attribute('//link[@rel="canonical"]', 'href'));
+        self::assertSame('article', $page->attribute('//meta[@property="og:type"]', 'content'));
+        self::assertSame('http://blog.test/uploads/main.webp', $page->attribute('//meta[@property="og:image"]', 'content'));
+        self::assertSame(['BlogPosting', 'BreadcrumbList'], array_keys($page->schema()));
+    }
+
+    public function testPostTextIsEscaped(): void
+    {
+        $this->insertPost(
+            'xss',
+            [$this->insertCategory('tools')],
+            title: '<b>Заголовок</b>',
+            content: "<script>alert(1)</script>\n\n## <img src=x onerror=alert(1)>\n\n- <a href=\"javascript:alert(1)\">пункт</a>",
+        );
+
+        $response = $this->site->get('/post/xss');
+        $page = $this->page($response);
+
+        self::assertSame('<b>Заголовок</b>', $page->text('//h1'));
+        self::assertSame(0, $page->count('//main//script | //main//img[@src="x"] | //main//a[starts-with(@href, "javascript")]'));
+        self::assertStringContainsString('&lt;script&gt;alert(1)&lt;/script&gt;', $response->body);
+    }
+
+    public function testViewsAreCountedOnGetOnly(): void
+    {
+        $this->insertPost('post', [$this->insertCategory('tools')], views: 1999);
+
+        self::assertSame(200, $this->site->request('HEAD', '/post/post')->status);
+        self::assertSame(1999, $this->views('post'));
+
+        $page = $this->page($this->site->get('/post/post'));
+
+        self::assertSame(2000, $this->views('post'));
+        self::assertSame('Просмотры: 2 000', $page->text('//article//span[@class="post-info__views"]'));
+    }
+
     /**
      * @return array<string, array{string, string}>
      */
@@ -192,6 +258,8 @@ final class PagesTest extends DatabaseTestCase
             'страница не числом' => ['/category/tools?page=abc'],
             'неизвестная сортировка' => ['/category/tools?sort=rating'],
             'неизвестная категория с первой страницей' => ['/category/missing?page=1'],
+            'неизвестная статья' => ['/post/missing'],
+            'slug статьи в другом регистре' => ['/post/POST-1'],
         ];
     }
 
@@ -214,6 +282,14 @@ final class PagesTest extends DatabaseTestCase
         }
 
         return $tools;
+    }
+
+    private function views(string $slug): mixed
+    {
+        $statement = $this->pdo->prepare('SELECT views FROM posts WHERE slug = ?');
+        $statement->execute([$slug]);
+
+        return $statement->fetchColumn();
     }
 
     private function page(Response $response): Html

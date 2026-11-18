@@ -18,6 +18,16 @@ use PDO;
  *     views: int,
  *     published_at: string
  * }
+ * @phpstan-type Post array{
+ *     id: int,
+ *     slug: string,
+ *     title: string,
+ *     description: string,
+ *     image: string,
+ *     views: int,
+ *     published_at: string,
+ *     content: string
+ * }
  */
 final class PostRepository
 {
@@ -125,6 +135,55 @@ final class PostRepository
              LIMIT ? OFFSET ?",
         );
         $statement->execute([$categoryId, $limit, $offset]);
+
+        /** @var list<PostCard> */
+        return $statement->fetchAll();
+    }
+
+    /**
+     * @return Post|null
+     */
+    public function findBySlug(string $slug): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, slug, title, description, image, views, published_at, content FROM posts WHERE slug = ?',
+        );
+        $statement->execute([$slug]);
+
+        /** @var Post|false $post */
+        $post = $statement->fetch();
+
+        return $post === false ? null : $post;
+    }
+
+    /**
+     * Счётчик увеличивает сама база, поэтому одновременные просмотры не теряются.
+     */
+    public function incrementViews(int $postId): void
+    {
+        $this->pdo->prepare('UPDATE posts SET views = views + 1 WHERE id = ?')->execute([$postId]);
+    }
+
+    /**
+     * Похожие статьи: сначала те, у кого больше общих категорий со статьёй, среди равных - новые.
+     *
+     * @return list<PostCard>
+     */
+    public function similar(int $postId, int $limit): array
+    {
+        // own - категории статьи, other - другие статьи этих категорий; COUNT(*) в группе - число общих категорий.
+        // Остальные поля p можно выбирать при GROUP BY p.id: они зависят от первичного ключа
+        $statement = $this->pdo->prepare(
+            'SELECT p.id, p.slug, p.title, p.description, p.image, p.views, p.published_at
+             FROM category_post own
+             JOIN category_post other ON other.category_id = own.category_id AND other.post_id <> own.post_id
+             JOIN posts p ON p.id = other.post_id
+             WHERE own.post_id = ?
+             GROUP BY p.id
+             ORDER BY COUNT(*) DESC, p.published_at DESC, p.id DESC
+             LIMIT ?',
+        );
+        $statement->execute([$postId, $limit]);
 
         /** @var list<PostCard> */
         return $statement->fetchAll();

@@ -84,6 +84,46 @@ final class PageMetaTest extends TestCase
         self::assertSame('/category/tools?sort=views&page=2', $meta->canonical);
     }
 
+    public function testPost(): void
+    {
+        $post = [
+            'id' => 7,
+            'slug' => 'first',
+            'title' => 'Первая статья',
+            'description' => 'О чём статья.',
+            'image' => '/uploads/first.webp',
+            'views' => 10,
+            'published_at' => '2026-10-09 16:33:00',
+        ];
+        $categories = [['id' => 1, 'slug' => 'tools', 'name' => 'Инструменты'], ['id' => 2, 'slug' => 'money', 'name' => 'Деньги']];
+
+        $meta = $this->meta->post($post, $categories);
+
+        self::assertSame('Первая статья', $meta->title);
+        self::assertSame('О чём статья.', $meta->description);
+        self::assertSame('/post/first', $meta->canonical);
+        self::assertSame('article', $meta->ogType);
+        self::assertSame('/uploads/first.webp', $meta->image);
+        self::assertSame([
+            ['name' => 'Главная', 'url' => '/'],
+            ['name' => 'Инструменты', 'url' => '/category/tools'],
+            ['name' => 'Первая статья', 'url' => '/post/first'],
+        ], $meta->breadcrumbs);
+
+        $posting = $this->node($meta, 'BlogPosting');
+        self::assertSame('Первая статья', $posting['headline']);
+        self::assertSame('https://blog.test/uploads/first.webp', $posting['image']);
+        // Смещение зависит от date.timezone, проверяем только сами дату и время
+        self::assertIsString($posting['datePublished']);
+        self::assertStringStartsWith('2026-10-09T16:33:00', $posting['datePublished']);
+        self::assertSame('https://blog.test/post/first', $posting['mainEntityOfPage']);
+        self::assertSame(['Инструменты', 'Деньги'], $posting['articleSection']);
+        self::assertSame(['@type' => 'Organization', 'name' => 'Агентура', 'url' => 'https://blog.test/'], $posting['publisher']);
+        $crumbs = $this->node($meta, 'BreadcrumbList')['itemListElement'];
+        self::assertIsArray($crumbs);
+        self::assertCount(3, $crumbs);
+    }
+
     /**
      * @return array<mixed>
      */

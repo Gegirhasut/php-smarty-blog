@@ -6,11 +6,15 @@ namespace App\Blog;
 
 use App\Core\Meta;
 use App\Repository\CategoryRepository;
+use App\Repository\PostRepository;
+use DateTimeImmutable;
 
 /**
  * Заголовок, описание, canonical, хлебные крошки и JSON-LD для каждой страницы блога.
  *
  * @phpstan-import-type Category from CategoryRepository
+ * @phpstan-import-type CategoryLink from CategoryRepository
+ * @phpstan-import-type PostCard from PostRepository
  */
 final class PageMeta
 {
@@ -66,6 +70,46 @@ final class PageMeta
                     'name' => $category['name'],
                     'description' => $category['description'],
                     'url' => $this->url($canonical),
+                ],
+                $this->breadcrumbList($breadcrumbs),
+            ],
+        );
+    }
+
+    /**
+     * @param PostCard $post
+     * @param list<CategoryLink> $categories категории статьи, первая попадает в хлебные крошки
+     */
+    public function post(array $post, array $categories): Meta
+    {
+        $path = '/post/' . $post['slug'];
+        $breadcrumbs = [self::HOME];
+        if ($categories !== []) {
+            $breadcrumbs[] = ['name' => $categories[0]['name'], 'url' => '/category/' . $categories[0]['slug']];
+        }
+        $breadcrumbs[] = ['name' => $post['title'], 'url' => $path];
+        // Авторов в блоге нет, статьи выпускает сам блог
+        $publisher = ['@type' => 'Organization', 'name' => $this->siteName, 'url' => $this->url('/')];
+
+        return new Meta(
+            title: $post['title'],
+            description: $post['description'],
+            canonical: $path,
+            ogType: 'article',
+            image: $post['image'],
+            breadcrumbs: $breadcrumbs,
+            schema: [
+                [
+                    '@type' => 'BlogPosting',
+                    'headline' => $post['title'],
+                    'description' => $post['description'],
+                    'image' => $this->url($post['image']),
+                    'datePublished' => (new DateTimeImmutable($post['published_at']))->format(DATE_ATOM),
+                    'url' => $this->url($path),
+                    'mainEntityOfPage' => $this->url($path),
+                    'articleSection' => array_column($categories, 'name'),
+                    'author' => $publisher,
+                    'publisher' => $publisher,
                 ],
                 $this->breadcrumbList($breadcrumbs),
             ],

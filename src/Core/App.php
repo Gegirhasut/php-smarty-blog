@@ -7,6 +7,7 @@ namespace App\Core;
 use App\Blog\PageMeta;
 use App\Controller\CategoryController;
 use App\Controller\HomeController;
+use App\Controller\PostController;
 use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
 use Closure;
@@ -45,6 +46,12 @@ final class App
             $this->posts(),
         ))->index());
         $this->router->add('/category/{slug}', fn (Request $request, array $params): Response => (new CategoryController(
+            $this->view,
+            $meta,
+            $this->categories(),
+            $this->posts(),
+        ))->show($request, $params['slug']));
+        $this->router->add('/post/{slug}', fn (Request $request, array $params): Response => (new PostController(
             $this->view,
             $meta,
             $this->categories(),

@@ -60,6 +60,7 @@ final class AppTest extends TestCase
         return [
             'главная' => ['/'],
             'категория' => ['/category/tools'],
+            'статья' => ['/post/first'],
             'неизвестная страница' => ['/missing'],
         ];
     }

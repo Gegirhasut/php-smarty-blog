@@ -49,6 +49,25 @@ final class CategoryRepository
         return $category === false ? null : $category;
     }
 
+    /**
+     * Категории статьи в том же порядке, что и в меню.
+     *
+     * @return list<CategoryLink>
+     */
+    public function forPost(int $postId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT c.id, c.slug, c.name FROM categories c
+             JOIN category_post cp ON cp.category_id = c.id
+             WHERE cp.post_id = ?
+             ORDER BY cp.category_id',
+        );
+        $statement->execute([$postId]);
+
+        /** @var list<CategoryLink> */
+        return $statement->fetchAll();
+    }
+
     public function count(): int
     {
         $statement = $this->pdo->prepare('SELECT COUNT(*) FROM categories');
