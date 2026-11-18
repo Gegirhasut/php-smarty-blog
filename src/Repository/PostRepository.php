@@ -57,7 +57,7 @@ final class PostRepository
                 ),
                 'posts' => [],
             ];
-            $sections[$categoryId]['posts'][] = PostCard::fromRow($row);
+            $sections[$categoryId]['posts'][] = $this->card($row);
         }
 
         return array_values($sections);
@@ -94,7 +94,7 @@ final class PostRepository
         );
         $statement->execute([$categoryId, $limit, $offset]);
 
-        return array_map(PostCard::fromRow(...), Row::all($statement));
+        return array_map($this->card(...), Row::all($statement));
     }
 
     public function findBySlug(string $slug): ?Post
@@ -110,7 +110,7 @@ final class PostRepository
         $statement->execute([$slug]);
         $row = Row::first($statement);
 
-        return $row === null ? null : Post::fromRow($row);
+        return $row === null ? null : $this->post($row);
     }
 
     /**
@@ -141,7 +141,7 @@ final class PostRepository
         );
         $statement->execute([$postId, $limit]);
 
-        return array_map(PostCard::fromRow(...), Row::all($statement));
+        return array_map($this->card(...), Row::all($statement));
     }
 
     /**
@@ -161,7 +161,7 @@ final class PostRepository
 
         $posts = [];
         foreach (Row::all($statement) as $row) {
-            $posts[$row->int('category_id')][] = PostCard::fromRow($row);
+            $posts[$row->int('category_id')][] = $this->card($row);
         }
 
         return $posts;
@@ -179,7 +179,7 @@ final class PostRepository
         );
         $statement->execute([$limit]);
 
-        return array_map(PostCard::fromRow(...), Row::all($statement));
+        return array_map($this->card(...), Row::all($statement));
     }
 
     /**
@@ -266,5 +266,32 @@ final class PostRepository
         $rows = implode(', ', array_fill(0, count($links), '(?, ?, ?)'));
         $this->pdo->prepare("INSERT INTO category_post (post_id, category_id, position) VALUES {$rows}")
             ->execute(array_merge(...$links));
+    }
+
+    private function card(Row $row): PostCard
+    {
+        return new PostCard(
+            id: $row->int('id'),
+            slug: $row->string('slug'),
+            title: $row->string('title'),
+            description: $row->string('description'),
+            image: $row->string('image'),
+            views: $row->int('views'),
+            publishedAt: $row->date('published_at'),
+        );
+    }
+
+    private function post(Row $row): Post
+    {
+        return new Post(
+            id: $row->int('id'),
+            slug: $row->string('slug'),
+            title: $row->string('title'),
+            description: $row->string('description'),
+            image: $row->string('image'),
+            views: $row->int('views'),
+            publishedAt: $row->date('published_at'),
+            content: $row->string('content'),
+        );
     }
 }

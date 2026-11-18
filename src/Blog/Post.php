@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Blog;
 
-use App\Database\Row;
 use DateTimeImmutable;
 
 /**
@@ -22,20 +21,6 @@ final class Post
         public readonly DateTimeImmutable $publishedAt,
         public readonly string $content,
     ) {
-    }
-
-    public static function fromRow(Row $row): self
-    {
-        return new self(
-            id: $row->int('id'),
-            slug: $row->string('slug'),
-            title: $row->string('title'),
-            description: $row->string('description'),
-            image: $row->string('image'),
-            views: $row->int('views'),
-            publishedAt: $row->date('published_at'),
-            content: $row->string('content'),
-        );
     }
 
     public function withViews(int $views): self

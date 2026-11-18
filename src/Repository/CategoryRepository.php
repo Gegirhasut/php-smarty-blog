@@ -31,7 +31,7 @@ final class CategoryRepository
         );
         $statement->execute();
 
-        return array_map(Category::fromRow(...), Row::all($statement));
+        return array_map($this->category(...), Row::all($statement));
     }
 
     public function findBySlug(string $slug): ?Category
@@ -45,7 +45,7 @@ final class CategoryRepository
         $statement->execute([$slug]);
         $row = Row::first($statement);
 
-        return $row === null ? null : Category::fromRow($row);
+        return $row === null ? null : $this->category($row);
     }
 
     /**
@@ -63,7 +63,7 @@ final class CategoryRepository
         );
         $statement->execute([$postId]);
 
-        return array_map(Category::fromRow(...), Row::all($statement));
+        return array_map($this->category(...), Row::all($statement));
     }
 
     /**
@@ -160,5 +160,10 @@ final class CategoryRepository
 
         $rows = implode(', ', array_fill(0, count($categories), '(?, ?, ?)'));
         $this->pdo->prepare("INSERT INTO categories (name, slug, description) VALUES {$rows}")->execute($params);
+    }
+
+    private function category(Row $row): Category
+    {
+        return new Category($row->int('id'), $row->string('slug'), $row->string('name'), $row->string('description'));
     }
 }
