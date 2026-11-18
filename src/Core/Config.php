@@ -10,6 +10,8 @@ final class Config
         public readonly string $siteName,
         public readonly string $siteDescription,
         public readonly string $siteUrl,
+        // Картинка для соцсетей у страниц без своей обложки
+        public readonly string $siteImage,
         public readonly bool $debug,
     ) {
     }
@@ -20,6 +22,7 @@ final class Config
             siteName: 'Агентура',
             siteDescription: 'Блог об ИИ: новые модели и инструменты, агенты, исследования, деньги и люди.',
             siteUrl: rtrim(Env::get('APP_URL'), '/'),
+            siteImage: '/og.png',
             debug: Env::get('APP_ENV', 'prod') === 'dev',
         );
     }

@@ -16,9 +16,6 @@ use App\Core\Config;
  */
 final class PageMeta
 {
-    // Картинка для соцсетей у страниц без своей обложки
-    private const IMAGE = '/og.png';
-
     public function __construct(
         private readonly Config $config,
         private readonly Urls $urls,
@@ -31,7 +28,7 @@ final class PageMeta
             title: 'Блог об ИИ',
             description: $this->config->siteDescription,
             canonical: $this->urls->home(),
-            image: self::IMAGE,
+            image: $this->config->siteImage,
             schema: [[
                 '@type' => 'WebSite',
                 'name' => $this->config->siteName,
@@ -54,7 +51,7 @@ final class PageMeta
             // Список по просмотрам - те же статьи в другом порядке: индексировать в нём нечего, а ссылки на статьи
             // пусть обходятся. canonical на список по дате не подходит: на одной и той же странице у них разные статьи
             robots: $query->sort === Sort::Views ? 'noindex, follow' : null,
-            image: self::IMAGE,
+            image: $this->config->siteImage,
             breadcrumbs: $breadcrumbs,
             schema: [
                 [

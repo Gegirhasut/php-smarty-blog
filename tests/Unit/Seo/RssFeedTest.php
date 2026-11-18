@@ -19,7 +19,7 @@ final class RssFeedTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->feed = new RssFeed(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', debug: false), new Urls('https://blog.test'));
+        $this->feed = new RssFeed(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', '/og.png', debug: false), new Urls('https://blog.test'));
     }
 
     public function testDescribesChannel(): void

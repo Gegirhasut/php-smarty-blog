@@ -18,7 +18,7 @@ final class LlmsTxtTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->llms = new LlmsTxt(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', debug: false), new Urls('https://blog.test'));
+        $this->llms = new LlmsTxt(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', '/og.png', debug: false), new Urls('https://blog.test'));
     }
 
     public function testListsCategoriesWithTheirPosts(): void

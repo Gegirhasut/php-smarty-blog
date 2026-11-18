@@ -22,7 +22,7 @@ final class PageMetaTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->meta = new PageMeta(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', debug: false), new Urls('https://blog.test'));
+        $this->meta = new PageMeta(new Config('Агентура', 'Блог об ИИ.', 'https://blog.test', '/og.png', debug: false), new Urls('https://blog.test'));
         $this->category = new Category(1, 'tools', 'Инструменты', 'Обзоры сервисов.');
     }
 
