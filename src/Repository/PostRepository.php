@@ -126,25 +126,21 @@ final class PostRepository
 
     /**
      * Похожие статьи: сначала те, у кого больше общих категорий со статьёй, среди равных - новые.
+     * Меньше $limit - только если во всём блоге не хватает статей.
      *
      * @return list<PostCard>
      */
     public function similar(int $postId, int $limit): array
     {
-        // own - категории статьи, other - другие статьи этих категорий; COUNT(*) в группе - число общих категорий.
-        // Остальные поля p можно выбирать при GROUP BY p.id: они зависят от первичного ключа
-        $statement = $this->pdo->prepare(
-            'SELECT ' . self::CARD_COLUMNS . ' FROM category_post own
-             JOIN category_post other ON other.category_id = own.category_id AND other.post_id <> own.post_id
-             JOIN posts p ON p.id = other.post_id
-             WHERE own.post_id = ?
-             GROUP BY p.id
-             ORDER BY COUNT(*) DESC, p.published_at DESC, p.id DESC
-             LIMIT ?',
-        );
-        $statement->execute([$postId, $limit]);
+        $similar = $this->byCommonCategories($postId, $limit);
+        if (count($similar) === $limit) {
+            return $similar;
+        }
 
-        return array_map($this->card(...), Row::all($statement));
+        // Добор отдельным запросом, а не LEFT JOIN со всеми статьями: он нужен редко и идёт по индексу даты с LIMIT
+        $exclude = [$postId, ...array_map(fn (PostCard $post): int => $post->id, $similar)];
+
+        return [...$similar, ...$this->latestExcept($exclude, $limit - count($similar))];
     }
 
     /**
@@ -271,6 +267,45 @@ final class PostRepository
         $rows = implode(', ', array_fill(0, count($links), '(?, ?, ?)'));
         $this->pdo->prepare("INSERT INTO category_post (post_id, category_id, position) VALUES {$rows}")
             ->execute(array_merge(...$links));
+    }
+
+    /**
+     * @return list<PostCard>
+     */
+    private function byCommonCategories(int $postId, int $limit): array
+    {
+        // own - категории статьи, other - другие статьи этих категорий; COUNT(*) в группе - число общих категорий.
+        // Остальные поля p можно выбирать при GROUP BY p.id: они зависят от первичного ключа
+        $statement = $this->pdo->prepare(
+            'SELECT ' . self::CARD_COLUMNS . ' FROM category_post own
+             JOIN category_post other ON other.category_id = own.category_id AND other.post_id <> own.post_id
+             JOIN posts p ON p.id = other.post_id
+             WHERE own.post_id = ?
+             GROUP BY p.id
+             ORDER BY COUNT(*) DESC, p.published_at DESC, p.id DESC
+             LIMIT ?',
+        );
+        $statement->execute([$postId, $limit]);
+
+        return array_map($this->card(...), Row::all($statement));
+    }
+
+    /**
+     * @param non-empty-list<int> $exclude
+     * @return list<PostCard>
+     */
+    private function latestExcept(array $exclude, int $limit): array
+    {
+        $placeholders = implode(', ', array_fill(0, count($exclude), '?'));
+        $statement = $this->pdo->prepare(
+            'SELECT ' . self::CARD_COLUMNS . " FROM posts p
+             WHERE p.id NOT IN ({$placeholders})
+             ORDER BY p.published_at DESC, p.id DESC
+             LIMIT ?",
+        );
+        $statement->execute([...$exclude, $limit]);
+
+        return array_map($this->card(...), Row::all($statement));
     }
 
     private function card(Row $row): PostCard

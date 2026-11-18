@@ -178,10 +178,40 @@ final class PostRepositoryTest extends DatabaseTestCase
             ['both-old', 'one-new', 'one-tie-second'],
             array_column($this->posts->similar($post, 3), 'slug'),
         );
+        // Статья без общих категорий - только добором, после всех соседей по категориям
         self::assertSame(
-            ['both-old', 'one-new', 'one-tie-second', 'one-tie-first'],
+            ['both-old', 'one-new', 'one-tie-second', 'one-tie-first', 'unrelated'],
             array_column($this->posts->similar($post, 10), 'slug'),
         );
+    }
+
+    public function testSimilarPostsAreToppedUpWithNewestOthers(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $money = $this->insertCategory('money');
+        $this->insertPost('newer-neighbour', [$tools], '2026-10-09 10:00:00');
+        $post = $this->insertPost('post', [$tools], '2026-10-08 10:00:00');
+        $this->insertPost('newest', [$money], '2026-10-07 10:00:00');
+        $this->insertPost('newer', [$money], '2026-10-06 10:00:00');
+        $this->insertPost('old', [$money], '2026-09-01 10:00:00');
+
+        // Сосед по категории новее всех, но в доборе не повторяется; сама статья в блок не попадает
+        self::assertSame(
+            ['newer-neighbour', 'newest', 'newer'],
+            array_column($this->posts->similar($post, 3), 'slug'),
+        );
+    }
+
+    public function testPostWithoutNeighboursStillGetsThreeSimilar(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $money = $this->insertCategory('money');
+        $post = $this->insertPost('alone', [$tools], '2026-10-10 10:00:00');
+        foreach (['a', 'b', 'c', 'd'] as $day => $slug) {
+            $this->insertPost($slug, [$money], '2026-10-0' . ($day + 1) . ' 10:00:00');
+        }
+
+        self::assertSame(['d', 'c', 'b'], array_column($this->posts->similar($post, 3), 'slug'));
     }
 
     public function testPostsByMainCategory(): void
@@ -239,11 +269,12 @@ final class PostRepositoryTest extends DatabaseTestCase
         );
     }
 
-    public function testPostWithoutNeighboursHasNoSimilar(): void
+    public function testSimilarPostsAreFewerOnlyInTinyBlog(): void
     {
-        $post = $this->insertPost('alone', [$this->insertCategory('tools')]);
+        $post = $this->insertPost('post', [$this->insertCategory('tools')]);
+        $this->insertPost('other', [$this->insertCategory('money')]);
 
-        self::assertSame([], $this->posts->similar($post, 3));
+        self::assertSame(['other'], array_column($this->posts->similar($post, 3), 'slug'));
     }
 
     /**
