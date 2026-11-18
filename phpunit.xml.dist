@@ -10,6 +10,10 @@
          failOnRisky="true"
          failOnWarning="true"
          beStrictAboutOutputDuringTests="true">
+    <php>
+        <!-- Как в public/index.php: время в базе и на сайте - UTC -->
+        <ini name="date.timezone" value="UTC"/>
+    </php>
     <testsuites>
         <testsuite name="unit">
             <directory>tests/Unit</directory>

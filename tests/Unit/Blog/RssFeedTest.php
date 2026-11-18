@@ -43,8 +43,7 @@ final class RssFeedTest extends TestCase
         self::assertSame(['https://blog.test/post/new', 'https://blog.test/post/old'], $this->values($rss, '//item/link'));
         self::assertSame('Новости & <обзоры>', $this->value($rss, '//item[1]/title'));
         self::assertSame('https://blog.test/post/new', $this->value($rss, '//item[1]/guid[@isPermaLink="true"]'));
-        // Смещение зависит от date.timezone, проверяем только дату и время
-        self::assertStringStartsWith('Fri, 09 Oct 2026 16:33:00', $this->value($rss, '//item[1]/pubDate'));
+        self::assertSame('Fri, 09 Oct 2026 16:33:00 +0000', $this->value($rss, '//item[1]/pubDate'));
         self::assertSame('Описание статьи new.', $this->value($rss, '//item[1]/description'));
         self::assertSame(['Инструменты', 'Деньги'], $this->values($rss, '//item[1]/category'));
         self::assertSame([], $this->values($rss, '//item[2]/category'));

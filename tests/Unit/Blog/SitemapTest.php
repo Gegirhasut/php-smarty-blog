@@ -29,8 +29,8 @@ final class SitemapTest extends TestCase
             'https://blog.test/post/old',
         ], array_keys($urls));
         // Главная обновляется вместе с самой свежей статьёй
-        self::assertStringStartsWith('2026-10-05T10:00:00', $urls['https://blog.test/']);
-        self::assertStringStartsWith('2026-09-01T08:30:00', $urls['https://blog.test/post/old']);
+        self::assertSame('2026-10-05T10:00:00+00:00', $urls['https://blog.test/']);
+        self::assertSame('2026-09-01T08:30:00+00:00', $urls['https://blog.test/post/old']);
     }
 
     public function testEmptyBlogHasHomeWithoutDate(): void

@@ -114,9 +114,7 @@ final class PageMetaTest extends TestCase
         $posting = $this->node($meta, 'BlogPosting');
         self::assertSame('Первая статья', $posting['headline']);
         self::assertSame('https://blog.test/uploads/first.webp', $posting['image']);
-        // Смещение зависит от date.timezone, проверяем только сами дату и время
-        self::assertIsString($posting['datePublished']);
-        self::assertStringStartsWith('2026-10-09T16:33:00', $posting['datePublished']);
+        self::assertSame('2026-10-09T16:33:00+00:00', $posting['datePublished']);
         self::assertSame('https://blog.test/post/first', $posting['mainEntityOfPage']);
         self::assertSame(['Инструменты', 'Деньги'], $posting['articleSection']);
         self::assertSame(['@type' => 'Organization', 'name' => 'Агентура', 'url' => 'https://blog.test/'], $posting['publisher']);
