@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Blog;
+namespace App\Tests\Unit\Seo;
 
-use App\Blog\Sitemap;
+use App\Seo\Sitemap;
 use DateTimeImmutable;
 use DOMDocument;
 use PHPUnit\Framework\TestCase;

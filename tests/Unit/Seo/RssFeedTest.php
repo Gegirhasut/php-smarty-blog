@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Blog;
+namespace App\Tests\Unit\Seo;
 
 use App\Blog\PostCard;
-use App\Blog\RssFeed;
 use App\Core\Config;
+use App\Seo\RssFeed;
 use DateTimeImmutable;
 use DOMDocument;
 use DOMXPath;

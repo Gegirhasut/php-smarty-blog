@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Blog;
+namespace App\Tests\Unit\Seo;
 
 use App\Blog\Category;
 use App\Blog\ListingQuery;
-use App\Blog\PageMeta;
 use App\Blog\Post;
 use App\Blog\Sort;
 use App\Core\Config;
-use App\Core\Meta;
+use App\Seo\Meta;
+use App\Seo\PageMeta;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -125,6 +125,15 @@ final class PageMetaTest extends TestCase
         $crumbs = $this->node($meta, 'BreadcrumbList')['itemListElement'];
         self::assertIsArray($crumbs);
         self::assertCount(3, $crumbs);
+    }
+
+    public function testNotFoundPageIsNotShared(): void
+    {
+        $meta = $this->meta->notFound();
+
+        self::assertSame('Страница не найдена', $meta->title);
+        self::assertNull($meta->canonical);
+        self::assertSame([], $meta->schema);
     }
 
     /**

@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Blog;
+namespace App\Seo;
 
+use App\Blog\PostCard;
 use App\Core\Config;
 use XMLWriter;
 

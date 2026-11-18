@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Blog;
+namespace App\Tests\Unit\Seo;
 
 use App\Blog\Category;
-use App\Blog\LlmsTxt;
 use App\Blog\PostCard;
 use App\Core\Config;
+use App\Seo\LlmsTxt;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Unit\Core;
+namespace App\Tests\Unit\Seo;
 
-use App\Core\Meta;
+use App\Seo\Meta;
 use PHPUnit\Framework\TestCase;
 
 final class MetaTest extends TestCase

@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Core;
 
-use App\Blog\LlmsTxt;
-use App\Blog\PageMeta;
-use App\Blog\RssFeed;
-use App\Blog\Sitemap;
 use App\Controller\CategoryController;
 use App\Controller\FeedController;
 use App\Controller\HomeController;
@@ -17,6 +13,10 @@ use App\Controller\RobotsController;
 use App\Controller\SitemapController;
 use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
+use App\Seo\LlmsTxt;
+use App\Seo\PageMeta;
+use App\Seo\RssFeed;
+use App\Seo\Sitemap;
 use Closure;
 use PDO;
 use Throwable;
@@ -24,6 +24,7 @@ use Throwable;
 final class App
 {
     private readonly View $view;
+    private readonly PageMeta $meta;
     private readonly Router $router;
     private ?PDO $pdo = null;
 
@@ -45,6 +46,7 @@ final class App
             'description' => $config->siteDescription,
             'url' => $config->siteUrl,
         ]);
+        $this->meta = new PageMeta($config);
         $this->router = $this->routes();
     }
 
@@ -73,7 +75,7 @@ final class App
             return $this->router->dispatch($request);
         } catch (NotFoundException) {
             $html = $this->view->render('errors/404.tpl', [
-                'meta' => new Meta(title: 'Страница не найдена'),
+                'meta' => $this->meta->notFound(),
             ]);
 
             return new Response($html, 404);
@@ -86,24 +88,23 @@ final class App
      */
     private function routes(): Router
     {
-        $meta = new PageMeta($this->config);
         $router = new Router();
 
         $router->add('/', fn (): Response => (new HomeController(
             $this->view,
-            $meta,
+            $this->meta,
             $this->categories(),
             $this->posts(),
         ))->index());
         $router->add('/category/{slug}', fn (Request $request, array $params): Response => (new CategoryController(
             $this->view,
-            $meta,
+            $this->meta,
             $this->categories(),
             $this->posts(),
         ))->show($request, $params['slug']));
         $router->add('/post/{slug}', fn (Request $request, array $params): Response => (new PostController(
             $this->view,
-            $meta,
+            $this->meta,
             $this->categories(),
             $this->posts(),
         ))->show($request, $params['slug']));

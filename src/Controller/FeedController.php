@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Blog\RssFeed;
 use App\Core\Response;
 use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
+use App\Seo\RssFeed;
 
 final class FeedController
 {

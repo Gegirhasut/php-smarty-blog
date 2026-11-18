@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Blog\PageMeta;
 use App\Core\Response;
 use App\Core\View;
 use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
+use App\Seo\PageMeta;
 
 final class HomeController
 {

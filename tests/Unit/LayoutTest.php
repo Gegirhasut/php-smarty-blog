@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit;
 
 use App\Blog\Category;
-use App\Core\Meta;
 use App\Core\View;
+use App\Seo\Meta;
 use App\Tests\Html;
 use App\Tests\TempDir;
 use PHPUnit\Framework\TestCase;

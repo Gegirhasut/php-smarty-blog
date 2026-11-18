@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
-use App\Blog\LlmsTxt;
 use App\Core\Response;
 use App\Repository\PostRepository;
+use App\Seo\LlmsTxt;
 
 final class LlmsController
 {

@@ -2,10 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Blog;
+namespace App\Seo;
 
+use App\Blog\Category;
+use App\Blog\ListingQuery;
+use App\Blog\Post;
+use App\Blog\Sort;
 use App\Core\Config;
-use App\Core\Meta;
 
 /**
  * Заголовок, описание, canonical, хлебные крошки и JSON-LD для каждой страницы блога.
@@ -101,6 +104,14 @@ final class PageMeta
                 $this->breadcrumbList($breadcrumbs),
             ],
         );
+    }
+
+    /**
+     * Без canonical и соцсетей: страница 404 не должна попасть ни в поиск, ни в превью ссылок.
+     */
+    public function notFound(): Meta
+    {
+        return new Meta(title: 'Страница не найдена');
     }
 
     /**
