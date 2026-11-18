@@ -76,17 +76,21 @@ final class Seeder
             throw new RuntimeException("Нет файла с данными {$file}");
         }
 
-        $categories = require $file;
-        if (!is_array($categories) || $categories === []) {
+        $data = require $file;
+        if (!is_array($data) || $data === []) {
             throw new RuntimeException("В {$file} нет списка категорий");
         }
-        foreach ($categories as $category) {
-            $this->requireKeys($category, self::CATEGORY_KEYS, $file);
-        }
 
-        /** @var list<array{slug: string, name: string, description: string}> $categories */
-        foreach ($categories as $category) {
-            $this->requireSlug($category['slug'], $file);
+        $categories = [];
+        foreach ($data as $category) {
+            $category = $this->fields($category, self::CATEGORY_KEYS, $file);
+            $slug = $this->string($category, 'slug', $file);
+            $this->requireSlug($slug, $file);
+            $categories[] = [
+                'slug' => $slug,
+                'name' => $this->string($category, 'name', $file),
+                'description' => $this->string($category, 'description', $file),
+            ];
         }
 
         return $categories;
@@ -108,16 +112,23 @@ final class Seeder
     {
         $posts = [];
         foreach (glob($this->seedsDir . '/posts/*.php') ?: [] as $file) {
-            /** @var array{title: string, image?: string, description: string, categories: list<string>, published_at: string, views: int, content: string} $post */
-            $post = require $file;
-            $this->requireKeys($post, self::POST_KEYS, $file);
-            if ($post['categories'] === []) {
-                throw new RuntimeException("В {$file} пустой список категорий");
-            }
+            $data = $this->fields(require $file, self::POST_KEYS, $file);
             // Slug статьи - имя её файла
             $slug = basename($file, '.php');
             $this->requireSlug($slug, $file);
-            $posts[] = ['slug' => $slug] + $post;
+            $post = [
+                'slug' => $slug,
+                'title' => $this->string($data, 'title', $file),
+                'description' => $this->string($data, 'description', $file),
+                'categories' => $this->categorySlugs($data, $file),
+                'published_at' => $this->string($data, 'published_at', $file),
+                'views' => $this->int($data, 'views', $file),
+                'content' => $this->string($data, 'content', $file),
+            ];
+            if (array_key_exists('image', $data)) {
+                $post['image'] = $this->string($data, 'image', $file);
+            }
+            $posts[] = $post;
         }
 
         // Старые статьи получают меньшие id, как если бы их добавляли по мере публикации
@@ -128,21 +139,68 @@ final class Seeder
 
     /**
      * @param list<string> $keys
+     * @return array<mixed>
      */
-    private function requireKeys(mixed $data, array $keys, string $file): void
+    private function fields(mixed $data, array $keys, string $file): array
     {
         $missing = is_array($data) ? array_diff($keys, array_keys($data)) : $keys;
-        if ($missing !== []) {
+        if (!is_array($data) || $missing !== []) {
             throw new RuntimeException("В {$file} нет полей: " . implode(', ', $missing));
         }
+
+        return $data;
     }
 
-    private function requireSlug(mixed $slug, string $file): void
+    /**
+     * @param array<mixed> $data
+     */
+    private function string(array $data, string $key, string $file): string
     {
-        if (!is_string($slug) || !Slug::isValid($slug)) {
-            $value = is_string($slug) ? $slug : get_debug_type($slug);
+        return is_string($data[$key])
+            ? $data[$key]
+            : throw new RuntimeException("В {$file} поле {$key} должно быть строкой, а не " . get_debug_type($data[$key]));
+    }
+
+    /**
+     * @param array<mixed> $data
+     */
+    private function int(array $data, string $key, string $file): int
+    {
+        return is_int($data[$key])
+            ? $data[$key]
+            : throw new RuntimeException("В {$file} поле {$key} должно быть целым числом, а не " . get_debug_type($data[$key]));
+    }
+
+    /**
+     * @param array<mixed> $data
+     * @return list<string>
+     */
+    private function categorySlugs(array $data, string $file): array
+    {
+        $slugs = $data['categories'];
+        if ($slugs === []) {
+            throw new RuntimeException("В {$file} пустой список категорий");
+        }
+        if (!is_array($slugs) || !array_is_list($slugs)) {
+            throw new RuntimeException("В {$file} поле categories должно быть списком slug категорий");
+        }
+
+        $list = [];
+        foreach ($slugs as $slug) {
+            $list[] = is_string($slug)
+                ? $slug
+                : throw new RuntimeException("В {$file} поле categories должно быть списком slug категорий");
+        }
+
+        return $list;
+    }
+
+    private function requireSlug(string $slug, string $file): void
+    {
+        if (!Slug::isValid($slug)) {
             throw new RuntimeException(
-                "В {$file} slug «{$value}» не подходит для адреса: нужны латиница в нижнем регистре, цифры и дефисы",
+                "В {$file} slug «{$slug}» не подходит для адреса: нужны латиница в нижнем регистре, цифры и дефисы, "
+                . 'и не одни цифры',
             );
         }
     }

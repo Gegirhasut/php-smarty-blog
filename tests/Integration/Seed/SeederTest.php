@@ -133,6 +133,27 @@ final class SeederTest extends DatabaseTestCase
         }
     }
 
+    public function testValidatesCategoryFieldTypes(): void
+    {
+        $seeds = new TempDir();
+        $seeds->copy(self::FIXTURES, 'seeds');
+        file_put_contents(
+            $seeds->path . '/seeds/categories.php',
+            "<?php return [['slug' => 'travel', 'name' => ['Путешествия'], 'description' => '']];",
+        );
+
+        try {
+            $this->seeder($seeds->path . '/seeds')->run();
+            self::fail('Сидер должен был остановиться на названии не строкой');
+        } catch (RuntimeException $e) {
+            self::assertStringContainsString('categories.php поле name должно быть строкой, а не array', $e->getMessage());
+        } finally {
+            $seeds->remove();
+        }
+
+        $this->assertRowCount(0, 'categories');
+    }
+
     public function testRejectsCategorySlugUnfitForAddress(): void
     {
         $seeds = new TempDir();
@@ -182,6 +203,12 @@ final class SeederTest extends DatabaseTestCase
         yield 'не массив' => ["<?php return 'Статья';", 'нет полей: title, description'];
         yield 'без даты' => ["<?php return ['title' => 'Статья', 'description' => '', 'categories' => ['travel'], 'views' => 1, 'content' => ''];", 'нет полей: published_at'];
         yield 'без категорий' => ["<?php return [{$fields}, 'categories' => [], 'image' => 'travel-1.webp'];", 'пустой список категорий'];
+        yield 'категории строкой' => ["<?php return [{$fields}, 'categories' => 'travel'];", 'поле categories должно быть списком'];
+        yield 'категория не строка' => ["<?php return [{$fields}, 'categories' => ['travel', 7]];", 'поле categories должно быть списком'];
+        yield 'категории не список' => ["<?php return [{$fields}, 'categories' => ['main' => 'travel']];", 'поле categories должно быть списком'];
+        yield 'заголовок не строка' => ["<?php return [{$fields}, 'categories' => ['travel'], 'title' => null];", 'поле title должно быть строкой, а не null'];
+        yield 'просмотры строкой' => ["<?php return [{$fields}, 'categories' => ['travel'], 'views' => '5'];", 'поле views должно быть целым числом'];
+        yield 'обложка null' => ["<?php return [{$fields}, 'categories' => ['travel'], 'image' => null];", 'поле image должно быть строкой'];
     }
 
     #[DataProvider('brokenPosts')]
