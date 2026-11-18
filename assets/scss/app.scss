@@ -1,5 +1,4 @@
 // Точка входа: dart-sass собирает отсюда public/assets/css/app.css (сервис sass в compose.yaml).
-// Порядок: основа, каркас страницы, компоненты (BEM-блоки), стили отдельных страниц
 @use "base/fonts";
 @use "base/tokens";
 @use "base/reset";

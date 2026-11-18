@@ -19,8 +19,6 @@ final class ListingQuery
     }
 
     /**
-     * Чего нет в адресе, берётся по умолчанию.
-     *
      * @param array<mixed> $query параметры адреса
      * @return self|null null, если sort или page некорректны
      */

@@ -17,7 +17,6 @@ WORKDIR /app
 COPY assets assets
 RUN /opt/dart-sass/sass --no-source-map --style=compressed assets/scss/app.scss app.css
 
-# Зависимости без dev-пакетов
 FROM composer:2 AS vendor
 WORKDIR /app
 COPY composer.json composer.lock ./

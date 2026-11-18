@@ -22,7 +22,6 @@
         transform: translateX(3px);
     }
 
-    // Главная кнопка экрана: коралловая
     &--accent {
         color: var(--color-on-primary);
         background: var(--color-accent-strong);
@@ -42,7 +41,6 @@
         }
     }
 
-    // Второстепенная: светлая, с рамкой
     &--light {
         color: var(--color-primary);
         background: var(--color-surface);

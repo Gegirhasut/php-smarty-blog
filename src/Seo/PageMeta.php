@@ -11,9 +11,6 @@ use App\Blog\Sort;
 use App\Blog\Urls;
 use App\Core\Config;
 
-/**
- * Заголовок, описание, canonical, хлебные крошки и JSON-LD для каждой страницы блога.
- */
 final class PageMeta
 {
     public function __construct(

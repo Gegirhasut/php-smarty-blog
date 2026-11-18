@@ -1,7 +1,6 @@
 {extends "layout.tpl"}
 
 {block "content"}
-    {* Статья и сайдбар рядом, на узком экране сайдбар уходит под текст *}
     <div class="post-page">
         <article class="post-page__main post">
             <header class="post__header">

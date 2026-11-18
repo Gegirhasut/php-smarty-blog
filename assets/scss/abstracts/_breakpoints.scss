@@ -20,7 +20,6 @@ $breakpoints: (
     }
 }
 
-// Только между двумя брейкпоинтами
 @mixin between($from, $to) {
     @media (#{map.get($breakpoints, $from)} <= width < #{map.get($breakpoints, $to)}) {
         @content;

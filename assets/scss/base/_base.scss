@@ -36,7 +36,6 @@ a {
     outline-offset: 2px;
 }
 
-// Текст для читалок экрана: на экране его нет, но фокус и чтение работают
 .visually-hidden {
     @include visually-hidden;
 }
