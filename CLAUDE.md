@@ -61,9 +61,10 @@
   favicon, иконки для телефона, `site.webmanifest` и `og.jpg`.
 - `Dockerfile` (стадия `sass` - сборщик стилей, последняя - PHP для разработки) и `docker/nginx` - окружение для разработки.
 - `docker/demo` и `render.yaml` - демо на Render: один контейнер с nginx, php-fpm и MySQL 8.4 под 512 МБ. Render не выбирает
-  стадию сборки, поэтому у демо свой Dockerfile: версию dart-sass и суммы меняйте в обоих. Системные таблицы MySQL создаются
-  при сборке, база сайта и данные - при каждом старте (`start.sh`: MySQL, сидер, php-fpm, nginx; упал любой - контейнер
-  завершается). Правила nginx берутся из `docker/nginx/default.conf`, меняются только порт (`$PORT`) и адрес php-fpm.
+  стадию сборки, поэтому у демо свой Dockerfile: версию dart-sass и суммы меняйте в обоих. Системные таблицы MySQL, база
+  сайта и данные создаются при сборке образа (`start.sh build`: MySQL, сидер, компиляция шаблонов); при старте (`start.sh`)
+  - MySQL с готовыми данными и новым паролем, php-fpm и nginx; упал любой - контейнер завершается. Правила nginx берутся
+  из `docker/nginx/default.conf`, меняются только порт (`$PORT`) и адрес php-fpm.
   Проверка: `docker build -f docker/demo/Dockerfile -t blog-demo .` и `docker run --rm -m 512m -p 18080:10000
   -e APP_URL=http://localhost:18080 blog-demo`.
 
