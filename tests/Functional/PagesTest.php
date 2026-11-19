@@ -271,13 +271,16 @@ final class PagesTest extends DatabaseTestCase
     {
         $tools = $this->insertCategory('tools');
         $this->insertCategory('empty');
-        $this->insertPost('old', [$tools], '2026-09-01 10:00:00');
+        $old = $this->insertPost('old', [$tools], '2026-09-01 10:00:00');
         $new = $this->insertPost('new', [$tools], '2026-10-05 10:00:00');
-        // Файл статей - диапазон id: id в тестовой базе не обязательно начинаются с единицы
-        $file = intdiv($new - 1, Sitemap::POSTS_PER_FILE) + 1;
+        // Файлы статей - диапазоны id с первого до файла наибольшего id; id в тестовой базе не начинаются с единицы
+        $files = array_map(
+            static fn (int $number): string => "http://blog.test/sitemap-posts-{$number}.xml",
+            range(1, intdiv(max($old, $new) - 1, Sitemap::POSTS_PER_FILE) + 1),
+        );
 
         self::assertSame(
-            ['http://blog.test/sitemap-categories.xml', "http://blog.test/sitemap-posts-{$file}.xml"],
+            ['http://blog.test/sitemap-categories.xml', ...$files],
             $this->sitemapLocs('/sitemap.xml', 'sitemapindex'),
         );
         self::assertSame(
@@ -285,10 +288,11 @@ final class PagesTest extends DatabaseTestCase
             $this->sitemapLocs('/sitemap-categories.xml', 'urlset'),
         );
         // По возрастанию id: старые статьи остаются в начале своего файла
-        self::assertSame(
-            ['http://blog.test/post/old', 'http://blog.test/post/new'],
-            $this->sitemapLocs("/sitemap-posts-{$file}.xml", 'urlset'),
-        );
+        $posts = [];
+        foreach ($files as $url) {
+            $posts = [...$posts, ...$this->sitemapLocs(substr($url, strlen('http://blog.test')), 'urlset')];
+        }
+        self::assertSame(['http://blog.test/post/old', 'http://blog.test/post/new'], $posts);
     }
 
     public function testSitemapPostFilesOutsideRangeAreMissing(): void
