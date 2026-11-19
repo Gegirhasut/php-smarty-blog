@@ -10,6 +10,7 @@ use App\Repository\PostRepository;
 use App\Tests\DatabaseTestCase;
 use App\Tests\TempDir;
 use PDO;
+use PDOException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 
@@ -141,6 +142,61 @@ final class SeederTest extends DatabaseTestCase
         $this->expectExceptionMessage('--fresh');
 
         $seeder->run();
+    }
+
+    public function testFreshReseedsFilledDatabase(): void
+    {
+        $seeder = $this->seeder(self::FIXTURES);
+        $seeder->run();
+
+        self::assertSame(['categories' => 2, 'posts' => 3], $seeder->run(fresh: true));
+        $this->assertRowCount(2, 'categories');
+        $this->assertRowCount(3, 'posts');
+    }
+
+    /**
+     * @return iterable<string, array{callable(string): mixed, string}>
+     */
+    public static function brokenSeeds(): iterable
+    {
+        yield 'статья без полей' => [
+            fn (string $dir) => file_put_contents("{$dir}/posts/broken.php", "<?php return ['title' => 'Статья'];"),
+            'broken.php нет полей',
+        ];
+        yield 'неизвестная категория' => [
+            fn (string $dir) => file_put_contents(
+                "{$dir}/posts/broken.php",
+                "<?php return ['title' => 'Статья', 'description' => '', 'categories' => ['travel', 'missing'],"
+                . " 'published_at' => '2026-10-01 10:00:00', 'views' => 1, 'content' => ''];",
+            ),
+            'broken.php неизвестная категория missing',
+        ];
+        yield 'нет обложки' => [fn (string $dir) => unlink("{$dir}/images/food-1.webp"), 'food-1.webp'];
+    }
+
+    /**
+     * @param callable(string): mixed $break
+     */
+    #[DataProvider('brokenSeeds')]
+    public function testFreshKeepsDatabaseWhenSeedsAreBroken(callable $break, string $message): void
+    {
+        $this->seeder(self::FIXTURES)->run();
+        $seeds = new TempDir();
+        $seeds->copy(self::FIXTURES, 'seeds');
+        $break($seeds->path . '/seeds');
+
+        try {
+            $this->seeder($seeds->path . '/seeds')->run(fresh: true);
+            self::fail('Сидер должен был остановиться на ошибке в данных');
+        } catch (RuntimeException $e) {
+            self::assertStringContainsString($message, $e->getMessage());
+        } finally {
+            $seeds->remove();
+        }
+
+        // Данные проверяются до пересоздания таблиц: база осталась как была
+        $this->assertRowCount(2, 'categories');
+        $this->assertRowCount(3, 'posts');
     }
 
     public function testRequiresDataFile(): void
@@ -285,25 +341,23 @@ final class SeederTest extends DatabaseTestCase
         self::assertSame('/uploads/travel-1.webp', $this->select("SELECT image FROM posts WHERE slug = 'baikal'")->fetchColumn());
     }
 
-    public function testRollsBackEverythingOnUnknownCategory(): void
+    public function testRollsBackEverythingOnDatabaseError(): void
     {
         $seeds = new TempDir();
-        copy(self::FIXTURES . '/categories.php', $seeds->path . '/categories.php');
-        mkdir($seeds->path . '/posts');
-        mkdir($seeds->path . '/images');
-        touch($seeds->path . '/images/travel-1.webp');
+        $seeds->copy(self::FIXTURES, 'seeds');
+        // Файл проходит проверку сидера, а заголовок длиннее колонки отклоняет MySQL - уже после вставки категорий
+        $title = str_repeat('я', 201);
         file_put_contents(
-            $seeds->path . '/posts/broken.php',
-            "<?php return ['title' => 'Статья', 'description' => '', 'categories' => ['travel', 'missing'],"
-            . " 'image' => 'travel-1.webp',"
+            $seeds->path . '/seeds/posts/long.php',
+            "<?php return ['title' => '{$title}', 'description' => '', 'categories' => ['travel'],"
             . " 'published_at' => '2026-10-01 10:00:00', 'views' => 1, 'content' => ''];",
         );
 
         try {
-            $this->seeder($seeds->path)->run();
-            self::fail('Сидер должен был остановиться на неизвестной категории');
-        } catch (RuntimeException $e) {
-            self::assertStringContainsString('missing', $e->getMessage());
+            $this->seeder($seeds->path . '/seeds')->run();
+            self::fail('Сидер должен был остановиться на ошибке базы');
+        } catch (PDOException $e) {
+            self::assertStringContainsString('title', $e->getMessage());
         } finally {
             $seeds->remove();
         }
@@ -335,6 +389,7 @@ final class SeederTest extends DatabaseTestCase
         touch($this->uploads->path . '/file');
         $seeder = new Seeder(
             $this->pdo,
+            $this->schema,
             new CategoryRepository($this->pdo),
             new PostRepository($this->pdo),
             self::FIXTURES,
@@ -351,6 +406,7 @@ final class SeederTest extends DatabaseTestCase
     {
         return new Seeder(
             $this->pdo,
+            $this->schema,
             new CategoryRepository($this->pdo),
             new PostRepository($this->pdo),
             $seedsDir,

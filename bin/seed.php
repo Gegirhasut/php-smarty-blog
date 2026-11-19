@@ -34,15 +34,15 @@ foreach (array_slice($argv ?? [], 1) as $arg) {
 // PDOException тоже RuntimeException: недоступная база, ошибка схемы и плохие данные выводятся одной строкой
 try {
     $pdo = Connection::fromEnvironment()->connect();
-    $schema = new Schema($pdo, $root . '/database/schema.sql');
-
-    if ($fresh) {
-        $schema->drop();
-    }
-    $schema->create();
-
-    $seeder = new Seeder($pdo, new CategoryRepository($pdo), new PostRepository($pdo), $root . '/database/seeds', $root . '/public/uploads');
-    $result = $seeder->run($generate);
+    $seeder = new Seeder(
+        $pdo,
+        new Schema($pdo, $root . '/database/schema.sql'),
+        new CategoryRepository($pdo),
+        new PostRepository($pdo),
+        $root . '/database/seeds',
+        $root . '/public/uploads',
+    );
+    $result = $seeder->run($generate, $fresh);
 } catch (RuntimeException $e) {
     fwrite(STDERR, 'Ошибка: ' . $e->getMessage() . PHP_EOL);
     exit(1);

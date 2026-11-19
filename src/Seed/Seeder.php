@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Seed;
 
 use App\Blog\Slug;
+use App\Database\Schema;
 use App\Repository\CategoryRepository;
 use App\Repository\PostRepository;
 use PDO;
@@ -34,6 +35,7 @@ final class Seeder
 
     public function __construct(
         private readonly PDO $pdo,
+        private readonly Schema $schema,
         private readonly CategoryRepository $categories,
         private readonly PostRepository $posts,
         private readonly string $seedsDir,
@@ -43,21 +45,26 @@ final class Seeder
 
     /**
      * @param int $generate сколько статей сгенерировать в дополнение к демо-данным (PostGenerator)
+     * @param bool $fresh удалить таблицы с данными и создать заново; без него сидер заполняет только пустую базу
      * @return array{categories: int, posts: int}
      */
-    public function run(int $generate = 0): array
+    public function run(int $generate = 0, bool $fresh = false): array
     {
+        // Файлы проверяются и обложки копируются до того, как меняется база: с ошибкой в данных --fresh
+        // не оставит её пустой. Сгенерированные статьи берут обложки демо-статей
+        $categories = $this->loadCategories();
+        $slugs = array_column($categories, 'slug');
+        $posts = $this->loadPosts($slugs);
+        $generator = $generate > 0 ? new PostGenerator($posts, $slugs, $generate) : null;
+        $this->copyCovers(array_unique(array_column($posts, 'image')));
+
+        if ($fresh) {
+            $this->schema->drop();
+        }
+        $this->schema->create();
         if ($this->categories->count() > 0) {
             throw new RuntimeException('В базе уже есть данные, для пересоздания запустите сидер с --fresh');
         }
-
-        $categories = $this->loadCategories();
-        $posts = $this->loadPosts();
-        $generator = $generate > 0 ? new PostGenerator($posts, array_column($categories, 'slug'), $generate) : null;
-
-        // Обложки копируются до вставки: если какой-то не хватает, база остается пустой.
-        // Сгенерированные статьи берут обложки демо-статей, отдельно их копировать не нужно
-        $this->copyCovers(array_unique(array_column($posts, 'image')));
 
         $this->pdo->beginTransaction();
         try {
@@ -113,9 +120,10 @@ final class Seeder
     }
 
     /**
+     * @param list<string> $categories slug всех категорий
      * @return list<SeedPost>
      */
-    private function loadPosts(): array
+    private function loadPosts(array $categories): array
     {
         $posts = [];
         foreach (glob($this->seedsDir . '/posts/*.php') ?: [] as $file) {
@@ -127,7 +135,7 @@ final class Seeder
                 'slug' => $slug,
                 'title' => $this->string($data, 'title', $file),
                 'description' => $this->string($data, 'description', $file),
-                'categories' => $this->categorySlugs($data, $file),
+                'categories' => $this->categorySlugs($data, $categories, $file),
                 'published_at' => $this->string($data, 'published_at', $file),
                 'views' => $this->int($data, 'views', $file),
                 'content' => $this->string($data, 'content', $file),
@@ -180,9 +188,10 @@ final class Seeder
 
     /**
      * @param array<mixed> $data
+     * @param list<string> $known
      * @return list<string>
      */
-    private function categorySlugs(array $data, string $file): array
+    private function categorySlugs(array $data, array $known, string $file): array
     {
         $slugs = $data['categories'];
         if ($slugs === []) {
@@ -194,9 +203,12 @@ final class Seeder
 
         $list = [];
         foreach ($slugs as $slug) {
-            $list[] = is_string($slug)
+            if (!is_string($slug)) {
+                throw new RuntimeException("В {$file} поле categories должно быть списком slug категорий");
+            }
+            $list[] = in_array($slug, $known, true)
                 ? $slug
-                : throw new RuntimeException("В {$file} поле categories должно быть списком slug категорий");
+                : throw new RuntimeException("В {$file} неизвестная категория {$slug}");
         }
 
         return $list;

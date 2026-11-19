@@ -28,6 +28,7 @@ final class SeedDataTest extends DatabaseTestCase
         self::clearTables($pdo);
         (new Seeder(
             $pdo,
+            self::schema($pdo),
             new CategoryRepository($pdo),
             new PostRepository($pdo),
             dirname(__DIR__, 3) . '/database/seeds',

@@ -135,7 +135,7 @@ abstract class DatabaseTestCase extends TestCase
         return $postId;
     }
 
-    private static function schema(PDO $pdo): Schema
+    protected static function schema(PDO $pdo): Schema
     {
         return new Schema($pdo, dirname(__DIR__) . '/database/schema.sql');
     }
