@@ -17,35 +17,37 @@ final class PostGeneratorTest extends TestCase
 {
     private const CATEGORIES = ['tools', 'agents', 'money', 'people'];
 
-    public function testGeneratesRequestedNumberOfPostsWithUniqueSlugs(): void
+    public function testGeneratesRequestedNumberOfPostsWithUniqueSlugsAndNumberedTitles(): void
     {
-        $samples = array_column($this->samples(), null, 'title');
-        $posts = $this->generator(250)->posts(0, 250);
+        $posts = $this->generator(250)->posts(250);
 
         self::assertCount(250, $posts);
         $slugs = array_column($posts, 'slug');
         self::assertSame($slugs, array_unique($slugs));
+        $titles = array_column($posts, 'title');
+        self::assertSame($titles, array_unique($titles));
         foreach ($posts as $i => $post) {
-            self::assertSame($samples[$post['title']]['slug'] . '-' . ($i + 1), $post['slug']);
+            $sample = $this->sampleOf($post);
+            self::assertSame($sample['slug'] . '-' . ($i + 1), $post['slug']);
+            self::assertSame($sample['title'] . ' (архив №' . ($i + 1) . ')', $post['title']);
             self::assertTrue(Slug::isValid($post['slug']), $post['slug']);
         }
     }
 
     public function testSameInputGivesSamePostsAndBatchesMatchWholeRun(): void
     {
-        $whole = $this->generator(10)->posts(0, 10);
+        $whole = $this->generator(10)->posts(10);
+        self::assertSame($whole, $this->generator(10)->posts(10));
 
-        self::assertSame($whole, $this->generator(10)->posts(0, 10));
-        self::assertSame($whole, [...$this->generator(10)->posts(0, 4), ...$this->generator(10)->posts(4, 6)]);
+        $generator = $this->generator(10);
+        self::assertSame($whole, [...$generator->posts(4), ...$generator->posts(6)]);
     }
 
     public function testPostKeepsMainCategoryOfSampleAndGetsUpToThreeKnownCategories(): void
     {
-        $samples = array_column($this->samples(), null, 'title');
-
         $counts = [];
-        foreach ($this->generator(300)->posts(0, 300) as $post) {
-            self::assertSame($samples[$post['title']]['categories'][0], $post['categories'][0]);
+        foreach ($this->generator(300)->posts(300) as $post) {
+            self::assertSame($this->sampleOf($post)['categories'][0], $post['categories'][0]);
             self::assertSame($post['categories'], array_values(array_unique($post['categories'])));
             self::assertSame([], array_diff($post['categories'], self::CATEGORIES));
             $counts[count($post['categories'])] = true;
@@ -57,10 +59,8 @@ final class PostGeneratorTest extends TestCase
 
     public function testCoverTextAndViewsComeFromSamples(): void
     {
-        $samples = array_column($this->samples(), null, 'title');
-
-        foreach ($this->generator(100)->posts(0, 100) as $post) {
-            $sample = $samples[$post['title']];
+        foreach ($this->generator(100)->posts(100) as $post) {
+            $sample = $this->sampleOf($post);
             self::assertSame($sample['description'], $post['description']);
             self::assertSame($sample['image'] ?? null, $post['image'] ?? null);
             self::assertStringStartsWith("Вступление {$sample['title']}.\n\n", $post['content']);
@@ -71,7 +71,7 @@ final class PostGeneratorTest extends TestCase
 
     public function testDatesGrowOverTwoYearsBeforeOldestSample(): void
     {
-        $dates = array_column($this->generator(1000)->posts(0, 1000), 'published_at');
+        $dates = array_column($this->generator(1000)->posts(1000), 'published_at');
 
         $sorted = $dates;
         sort($sorted);
@@ -88,6 +88,17 @@ final class PostGeneratorTest extends TestCase
         $this->expectExceptionMessage('демо-статья');
 
         new PostGenerator([], self::CATEGORIES, 10);
+    }
+
+    /**
+     * @param SeedPost $post
+     * @return SeedPost образец, с которого сделана статья: заголовок без « (архив №N)»
+     */
+    private function sampleOf(array $post): array
+    {
+        $samples = array_column($this->samples(), null, 'title');
+
+        return $samples[preg_replace('/ \(архив №\d+\)$/u', '', $post['title'])];
     }
 
     private function generator(int $total): PostGenerator

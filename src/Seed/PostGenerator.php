@@ -10,10 +10,10 @@ use RuntimeException;
 
 /**
  * Статьи для проверки на объёме: архив за два года до самой старой демо-статьи, даты растут с номером статьи.
- * Каждая статья повторяет случайный образец из демо-статей (заголовок, описание, обложка, основная категория)
- * и получает ещё до двух категорий; текст - вступление образца и абзацы других статей.
- * Случайность - хэш от seed, номера статьи и поля, а не генератор с состоянием: те же образцы дают те же статьи,
- * и любую пачку можно построить отдельно.
+ * Каждая статья повторяет случайный образец из демо-статей (заголовок с номером, описание, обложка, основная
+ * категория) и получает ещё до двух категорий; текст - вступление образца и абзацы других статей.
+ * Случайность - mt_rand() с постоянным seed: те же образцы дают те же статьи. Состояние mt_rand() общее
+ * для процесса, поэтому статьи выдаются только по порядку, пачка за пачкой.
  *
  * @phpstan-import-type SeedPost from Seeder
  */
@@ -29,6 +29,7 @@ final class PostGenerator
     private readonly array $paragraphs;
     private readonly int $start;
     private readonly int $step;
+    private int $next = 0;
 
     /**
      * @param list<SeedPost> $samples
@@ -56,32 +57,35 @@ final class PostGenerator
         $oldest = new DateTimeImmutable(min(array_column($samples, 'published_at')), new DateTimeZone('UTC'));
         $this->start = $oldest->getTimestamp() - self::SPAN;
         $this->step = max(1, intdiv(self::SPAN, max(1, $total)));
+        mt_srand(self::SEED);
     }
 
     /**
-     * Статьи с номерами от $from до $from + $count - 1.
+     * Следующие $count статей.
      *
      * @return list<SeedPost>
      */
-    public function posts(int $from, int $count): array
+    public function posts(int $count): array
     {
         $posts = [];
-        for ($i = $from; $i < $from + $count; $i++) {
-            $sample = $this->samples[$this->number($i, 'sample', count($this->samples))];
+        for ($last = $this->next + $count; $this->next < $last; $this->next++) {
+            $number = $this->next + 1;
+            $sample = $this->samples[mt_rand(0, count($this->samples) - 1)];
 
             $content = [explode("\n\n", $sample['content'], 2)[0]];
             for ($k = 0; $k < self::PARAGRAPHS && $this->paragraphs !== []; $k++) {
-                $content[] = $this->paragraphs[$this->number($i, "paragraph-{$k}", count($this->paragraphs))];
+                $content[] = $this->paragraphs[mt_rand(0, count($this->paragraphs) - 1)];
             }
 
             $post = [
-                // У slug образца в конце нет «-номер» другой статьи, поэтому номер делает slug уникальным
-                'slug' => "{$sample['slug']}-" . ($i + 1),
-                'title' => $sample['title'],
+                // У slug образца в конце нет «-номер» другой статьи, поэтому номер делает slug уникальным,
+                // а в заголовке - отличает в списках статьи одного образца
+                'slug' => "{$sample['slug']}-{$number}",
+                'title' => "{$sample['title']} (архив №{$number})",
                 'description' => $sample['description'],
-                'categories' => $this->categoriesFor($i, $sample['categories'][0]),
-                'published_at' => gmdate('Y-m-d H:i:s', $this->start + $i * $this->step + $this->number($i, 'time', $this->step)),
-                'views' => $this->number($i, 'views', self::MAX_VIEWS),
+                'categories' => $this->categoriesFor($sample['categories'][0]),
+                'published_at' => gmdate('Y-m-d H:i:s', $this->start + $this->next * $this->step + mt_rand(0, $this->step - 1)),
+                'views' => mt_rand(0, self::MAX_VIEWS - 1),
                 'content' => implode("\n\n", $content),
             ];
             if (isset($sample['image'])) {
@@ -96,23 +100,12 @@ final class PostGenerator
     /**
      * @return list<string> основная категория образца и до двух других без повторов
      */
-    private function categoriesFor(int $i, string $main): array
+    private function categoriesFor(string $main): array
     {
-        $categories = [$main];
-        $others = array_values(array_diff($this->categories, $categories));
-        $extra = min($this->number($i, 'extra', self::MAX_EXTRA_CATEGORIES + 1), count($others));
-        for ($k = 0; $k < $extra; $k++) {
-            $categories[] = array_splice($others, $this->number($i, "category-{$k}", count($others)), 1)[0];
-        }
+        $others = array_values(array_diff($this->categories, [$main]));
+        // shuffle() берёт числа из того же mt_rand() и при том же seed тоже повторяется
+        shuffle($others);
 
-        return $categories;
-    }
-
-    /**
-     * Число от 0 до $max - 1, которое зависит только от seed, номера статьи и поля.
-     */
-    private function number(int $i, string $field, int $max): int
-    {
-        return (int) hexdec(hash('xxh32', self::SEED . ":{$i}:{$field}")) % $max;
+        return [$main, ...array_slice($others, 0, mt_rand(0, self::MAX_EXTRA_CATEGORIES))];
     }
 }

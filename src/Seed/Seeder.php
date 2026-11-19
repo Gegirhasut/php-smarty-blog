@@ -65,7 +65,7 @@ final class Seeder
             // Сгенерированный архив старше демо-статей и вставляется первым: id растут вместе с датой
             if ($generator !== null) {
                 for ($from = 0; $from < $generate; $from += self::BATCH) {
-                    $this->insertPosts($generator->posts($from, min(self::BATCH, $generate - $from)), $categoryIds);
+                    $this->insertPosts($generator->posts(min(self::BATCH, $generate - $from)), $categoryIds);
                 }
             }
             $this->insertPosts($posts, $categoryIds);
