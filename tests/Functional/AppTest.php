@@ -47,6 +47,7 @@ final class AppTest extends TestCase
     {
         return [
             'страница' => ['/missing'],
+            'страница со слэшем' => ['/missing/'],
             'статика' => ['/uploads/missing.webp'],
             'точка входа' => ['/index.php'],
             // Постоянная часть адреса сравнивается без декодирования: иначе это был бы дубль sitemap с кодом 200
@@ -81,6 +82,26 @@ final class AppTest extends TestCase
             'robots' => ['/robots.txt'],
             'неизвестная страница' => ['/missing'],
         ];
+    }
+
+    /**
+     * @return array<string, array{string, string}>
+     */
+    public static function trailingSlashes(): array
+    {
+        return [
+            'статья' => ['/post/first/', '/post/first'],
+            'категория с сортировкой' => ['/category/tools/?sort=views&page=2', '/category/tools?sort=views&page=2'],
+        ];
+    }
+
+    #[DataProvider('trailingSlashes')]
+    public function testTrailingSlashRedirectsToPageWithoutIt(string $url, string $location): void
+    {
+        $response = $this->site->get($url);
+
+        self::assertSame(301, $response->status);
+        self::assertSame($location, $response->headers['Location']);
     }
 
     #[DataProvider('routes')]

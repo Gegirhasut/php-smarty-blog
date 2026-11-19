@@ -9,8 +9,9 @@ use App\Database\Connection;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
+// Предупреждения - исключения; устаревшее API, в том числе в vendor на новом PHP, ещё работает: его PHP только пишет в лог
 set_error_handler(function (int $level, string $message, string $file, int $line): bool {
-    if (!(error_reporting() & $level)) {
+    if (!(error_reporting() & $level) || $level === E_DEPRECATED || $level === E_USER_DEPRECATED) {
         return false;
     }
 

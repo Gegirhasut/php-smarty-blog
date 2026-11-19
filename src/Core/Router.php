@@ -35,7 +35,26 @@ final class Router
             }
         }
 
+        // Адрес маршрута со слэшем на конце (/post/slug/) - не другая страница: 301 на адрес без слэша
+        $path = rtrim($request->path, '/');
+        if ($path !== '' && $path !== $request->path && $this->matchesAny($path)) {
+            $query = http_build_query($request->query, '', '&', PHP_QUERY_RFC3986);
+
+            return Response::redirect($query === '' ? $path : "{$path}?{$query}");
+        }
+
         throw new NotFoundException();
+    }
+
+    private function matchesAny(string $path): bool
+    {
+        foreach (array_keys($this->routes) as $regex) {
+            if ($this->match($regex, $path) !== null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

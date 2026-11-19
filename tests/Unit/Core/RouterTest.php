@@ -77,6 +77,18 @@ final class RouterTest extends TestCase
         self::assertSame('12', $router->dispatch(new Request('GET', '/sitemap-posts-12.xml'))->body);
     }
 
+    public function testRedirectsRouteWithTrailingSlashKeepingQuery(): void
+    {
+        $router = new Router();
+        $router->add('/category/{slug}', fn (): Response => new Response('category'));
+
+        $response = $router->dispatch(new Request('GET', '/category/tools/', ['sort' => 'views', 'page' => '2']));
+
+        self::assertSame(301, $response->status);
+        self::assertSame(['Location' => '/category/tools?sort=views&page=2'], $response->headers);
+        self::assertSame('/category/tools', $router->dispatch(new Request('GET', '/category/tools//'))->headers['Location']);
+    }
+
     #[DataProvider('unknownPaths')]
     public function testThrowsNotFoundForUnknownPath(string $path): void
     {
@@ -98,9 +110,10 @@ final class RouterTest extends TestCase
         return [
             'unknown page' => ['/about'],
             'empty parameter' => ['/post/'],
-            'trailing slash' => ['/post/hello/'],
+            // Слэш на конце ведёт на адрес без него, только если такой маршрут есть
+            'trailing slash of unknown page' => ['/about/'],
+            'trailing slash of root' => ['//'],
             'extra segment' => ['/post/hello/comments'],
-            'double slash' => ['//'],
             // Постоянная часть не декодируется: иначе у каждой страницы были бы дубли с кодом 200
             'encoded dot' => ['/sitemap%2Exml'],
             'encoded letter' => ['/p%6Fst/hello'],
