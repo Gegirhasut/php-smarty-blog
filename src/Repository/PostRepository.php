@@ -15,13 +15,11 @@ use PDO;
 
 final class PostRepository
 {
-    // Колонки для PostCard: в списках текст статьи не нужен
-    private const POST_COLUMNS = 'p.id, p.slug, p.title, p.description, p.image, p.views, p.published_at';
-    // Основная категория - для заглушки вместо обложки: подзапрос на строку списка идёт по UNIQUE (post_id, position)
-    // и первичному ключу категорий
-    private const MAIN_CATEGORY = '(SELECT mc.slug FROM category_post mcp JOIN categories mc ON mc.id = mcp.category_id
+    // Колонки для PostCard: в списках текст статьи не нужен. Основная категория - для заглушки вместо обложки:
+    // подзапрос на строку списка идёт по UNIQUE (post_id, position) и первичному ключу категорий
+    private const CARD_COLUMNS = 'p.id, p.slug, p.title, p.description, p.image, p.views, p.published_at,
+        (SELECT mc.slug FROM category_post mcp JOIN categories mc ON mc.id = mcp.category_id
          WHERE mcp.post_id = p.id ORDER BY mcp.position LIMIT 1) AS main_category';
-    private const CARD_COLUMNS = self::POST_COLUMNS . ', ' . self::MAIN_CATEGORY;
     // Похожие ищутся среди стольких последних статей каждой категории статьи: группировать всех соседей
     // на 100 000 статей - секунды
     private const SIMILAR_CANDIDATES = 50;
@@ -37,20 +35,22 @@ final class PostRepository
      */
     public function latestByCategory(int $perCategory): array
     {
-        // LATERAL с LIMIT берёт у каждой категории только её последние статьи, а не нумерует все связи.
-        // Пустые категории отсекает JOIN. Производная таблица названа p, чтобы подзапрос основной категории
-        // шёл снаружи - только для выбранных статей
+        // LATERAL берёт у каждой категории только id последних статей, пустые категории отсекает JOIN; колонки
+        // карточки и подзапрос основной категории - снаружи, только для выбранных. STRAIGHT_JOIN: статьи идут
+        // по индексу даты, связь проверяется по PK, и LIMIT обрывает проход. Сам MySQL начинает со связей
+        // и сортирует все статьи категории - на 100 000 статей это 13 с вместо миллисекунд
         $statement = $this->pdo->prepare(
             'SELECT c.id AS category_id, c.slug AS category_slug, c.name AS category_name,
-                    c.description AS category_description, p.*, ' . self::MAIN_CATEGORY . '
+                    c.description AS category_description, ' . self::CARD_COLUMNS . '
              FROM categories c
              JOIN LATERAL (
-                 SELECT ' . self::POST_COLUMNS . ' FROM category_post cp
-                 JOIN posts p ON p.id = cp.post_id
+                 SELECT recent.id FROM posts recent
+                 STRAIGHT_JOIN category_post cp ON cp.post_id = recent.id
                  WHERE cp.category_id = c.id
-                 ORDER BY p.published_at DESC, p.id DESC
+                 ORDER BY recent.published_at DESC, recent.id DESC
                  LIMIT ?
-             ) p ON TRUE
+             ) latest ON TRUE
+             JOIN posts p ON p.id = latest.id
              ORDER BY c.id, p.published_at DESC, p.id DESC',
         );
         $statement->execute([$perCategory]);
@@ -286,19 +286,19 @@ final class PostRepository
      */
     private function byCommonCategories(int $postId, int $limit): array
     {
-        // own - категории статьи, other - последние статьи каждой из них, кроме самой статьи; COUNT(*) в группе -
-        // число общих категорий среди этих кандидатов. Остальные поля p можно выбирать при GROUP BY p.id:
-        // они зависят от первичного ключа
+        // own - категории статьи, other - последние статьи каждой из них, кроме самой статьи (STRAIGHT_JOIN -
+        // как на главной); COUNT(*) в группе - число общих категорий среди этих кандидатов.
+        // Остальные поля p можно выбирать при GROUP BY p.id: они зависят от первичного ключа
         $statement = $this->pdo->prepare(
             'SELECT ' . self::CARD_COLUMNS . ' FROM category_post own
              JOIN LATERAL (
-                 SELECT cp.post_id FROM category_post cp
-                 JOIN posts candidate ON candidate.id = cp.post_id
-                 WHERE cp.category_id = own.category_id AND cp.post_id <> own.post_id
+                 SELECT candidate.id FROM posts candidate
+                 STRAIGHT_JOIN category_post cp ON cp.post_id = candidate.id
+                 WHERE cp.category_id = own.category_id AND candidate.id <> own.post_id
                  ORDER BY candidate.published_at DESC, candidate.id DESC
                  LIMIT ' . self::SIMILAR_CANDIDATES . '
              ) other ON TRUE
-             JOIN posts p ON p.id = other.post_id
+             JOIN posts p ON p.id = other.id
              WHERE own.post_id = ?
              GROUP BY p.id
              ORDER BY COUNT(*) DESC, p.published_at DESC, p.id DESC
