@@ -151,30 +151,6 @@ final class PostRepository
     }
 
     /**
-     * Все статьи по основной категории, в каждой - от новых к старым. Основная - с наименьшей позицией, а не нулевой:
-     * статья, у которой нулевую категорию удалили, не должна пропасть из списка.
-     *
-     * @return array<int, list<PostCard>> id категории => статьи
-     */
-    public function byMainCategory(): array
-    {
-        $statement = $this->pdo->prepare(
-            'SELECT cp.category_id, ' . self::CARD_COLUMNS . ' FROM category_post cp
-             JOIN posts p ON p.id = cp.post_id
-             WHERE cp.position = (SELECT MIN(first.position) FROM category_post first WHERE first.post_id = cp.post_id)
-             ORDER BY cp.category_id, p.published_at DESC, p.id DESC',
-        );
-        $statement->execute();
-
-        $posts = [];
-        foreach (Row::all($statement) as $row) {
-            $posts[$row->int('category_id')][] = $this->card($row);
-        }
-
-        return $posts;
-    }
-
-    /**
      * @return list<PostCard>
      */
     public function latest(int $limit): array

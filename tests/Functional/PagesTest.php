@@ -314,7 +314,10 @@ final class PagesTest extends DatabaseTestCase
         $tools = $this->insertCategory('tools', 'Инструменты', 'Обзоры сервисов.');
         $agents = $this->insertCategory('agents', 'Агенты');
         $this->insertCategory('empty', 'Пустая');
-        $this->insertPost('first', [$tools, $agents], title: 'Первая');
+        $this->insertPost('first', [$tools, $agents], '2026-10-30 10:00:00', title: 'Первая');
+        for ($day = 1; $day <= 21; $day++) {
+            $this->insertPost("tool-{$day}", [$tools], sprintf('2026-10-%02d 10:00:00', $day));
+        }
 
         $response = $this->site->get('/llms.txt');
 
@@ -325,9 +328,14 @@ final class PagesTest extends DatabaseTestCase
         self::assertStringContainsString('- [Инструменты: все статьи](http://blog.test/category/tools): Обзоры сервисов.', $response->body);
         self::assertStringContainsString('- [Первая](http://blog.test/post/first): Описание статьи first.', $response->body);
         self::assertStringContainsString('(http://blog.test/feed.xml)', $response->body);
+        self::assertStringContainsString('(http://blog.test/sitemap.xml)', $response->body);
         self::assertStringNotContainsString('Пустая', $response->body);
-        // Статья из двух категорий упомянута один раз - в основной
-        self::assertSame(1, substr_count($response->body, '/post/first'));
+        // В категории только 20 свежих статей, остальные - по ссылке на категорию и в sitemap
+        self::assertSame(20, preg_match_all('#\(http://blog\.test/post/(first|tool-\d+)\)#', explode('## Агенты', $response->body)[0]));
+        self::assertStringNotContainsString('/post/tool-2)', $response->body);
+        self::assertStringContainsString('/post/tool-3)', $response->body);
+        // Статья из двух категорий - в разделе каждой
+        self::assertSame(2, substr_count($response->body, '/post/first'));
         self::assertStringContainsString("## Агенты\n\n- [Агенты: все статьи]", $response->body);
     }
 

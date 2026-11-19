@@ -23,11 +23,13 @@ final class LlmsTxtTest extends TestCase
 
     public function testListsCategoriesWithTheirPosts(): void
     {
-        $text = $this->llms->render(
-            [new Category(1, 'tools', 'Инструменты', 'Обзоры сервисов.'), new Category(2, 'money', 'Деньги', 'О деньгах.')],
-            [1 => [$this->post('first', 'Первая', 'О чём статья.')]],
-        );
+        $first = $this->post('first', 'Первая', 'О чём статья.');
+        $text = $this->llms->render([
+            ['category' => new Category(1, 'tools', 'Инструменты', 'Обзоры сервисов.'), 'posts' => [$first]],
+            ['category' => new Category(2, 'money', 'Деньги', 'О деньгах.'), 'posts' => [$this->post('second', 'Вторая', 'Ещё одна.'), $first]],
+        ]);
 
+        // Статья из двух категорий - в разделе каждой, как на главной
         self::assertSame(<<<'TEXT'
             # Агентура
 
@@ -41,20 +43,23 @@ final class LlmsTxtTest extends TestCase
             ## Деньги
 
             - [Деньги: все статьи](https://blog.test/category/money): О деньгах.
+            - [Вторая](https://blog.test/post/second): Ещё одна.
+            - [Первая](https://blog.test/post/first): О чём статья.
 
             ## Optional
 
             - [RSS](https://blog.test/feed.xml): последние статьи блога
+            - [Sitemap](https://blog.test/sitemap.xml): адреса всех страниц и статей
 
             TEXT, $text);
     }
 
     public function testKeepsLinksIntact(): void
     {
-        $text = $this->llms->render(
-            [new Category(1, 'tools', 'Инструменты', "Первая строка\nвторая.")],
-            [1 => [$this->post('first', 'Обзор [бета] \ релиз', 'Описание')]],
-        );
+        $text = $this->llms->render([[
+            'category' => new Category(1, 'tools', 'Инструменты', "Первая строка\nвторая."),
+            'posts' => [$this->post('first', 'Обзор [бета] \ релиз', 'Описание')],
+        ]]);
 
         self::assertStringContainsString('): Первая строка вторая.', $text);
         self::assertStringContainsString('- [Обзор \[бета\] \\\\ релиз](https://blog.test/post/first): Описание', $text);

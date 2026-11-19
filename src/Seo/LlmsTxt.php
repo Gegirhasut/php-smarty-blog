@@ -23,16 +23,16 @@ final class LlmsTxt
     }
 
     /**
-     * Каждая статья попадает в раздел своей основной категории, без повторов.
+     * Раздел на категорию: ссылка на неё и её свежие статьи. Статья из нескольких категорий есть в каждой из них,
+     * как на главной; все статьи блога - в sitemap.
      *
-     * @param list<Category> $categories
-     * @param array<int, list<PostCard>> $posts id категории => статьи, для которых она основная
+     * @param list<array{category: Category, posts: list<PostCard>}> $sections
      */
-    public function render(array $categories, array $posts): string
+    public function render(array $sections): string
     {
         $lines = ["# {$this->config->siteName}", '', '> ' . $this->inline($this->config->siteDescription), ''];
 
-        foreach ($categories as $category) {
+        foreach ($sections as ['category' => $category, 'posts' => $posts]) {
             $lines[] = '## ' . $this->inline($category->name);
             $lines[] = '';
             $lines[] = $this->link(
@@ -40,7 +40,7 @@ final class LlmsTxt
                 $this->urls->category($category->slug),
                 $category->description,
             );
-            foreach ($posts[$category->id] ?? [] as $post) {
+            foreach ($posts as $post) {
                 $lines[] = $this->link($post->title, $this->urls->post($post->slug), $post->description);
             }
             $lines[] = '';
@@ -50,6 +50,7 @@ final class LlmsTxt
         $lines[] = '## Optional';
         $lines[] = '';
         $lines[] = $this->link('RSS', $this->urls->feed(), 'последние статьи блога');
+        $lines[] = $this->link('Sitemap', $this->urls->sitemap(), 'адреса всех страниц и статей');
 
         return implode("\n", $lines) . "\n";
     }

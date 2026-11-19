@@ -231,36 +231,16 @@ final class PostRepositoryTest extends DatabaseTestCase
         self::assertSame(['d', 'c', 'b'], array_column($this->posts->similar($post, 3), 'slug'));
     }
 
-    public function testPostsByMainCategory(): void
-    {
-        $tools = $this->insertCategory('tools');
-        $agents = $this->insertCategory('agents');
-        $this->insertCategory('empty');
-        $this->insertPost('old-tool', [$tools], '2026-09-01 10:00:00');
-        $this->insertPost('agent-and-tool', [$agents, $tools], '2026-10-05 10:00:00');
-        $this->insertPost('new-tool', [$tools, $agents], '2026-10-07 10:00:00');
-
-        $posts = $this->posts->byMainCategory();
-
-        self::assertSame([$tools, $agents], array_keys($posts));
-        self::assertSame(['new-tool', 'old-tool'], array_column($posts[$tools], 'slug'));
-        self::assertSame(['agent-and-tool'], array_column($posts[$agents], 'slug'));
-    }
-
     public function testMainCategoryIsTheOneWithLowestPosition(): void
     {
         $tools = $this->insertCategory('tools');
         $agents = $this->insertCategory('agents');
-        $post = $this->insertPost('post', [$agents, $tools]);
+        $money = $this->insertCategory('money');
+        $post = $this->insertPost('post', [$agents, $money, $tools]);
         // Основная категория удалена: позиции оставшихся начинаются не с нуля
         $this->pdo->prepare('DELETE FROM category_post WHERE post_id = ? AND position = 0')->execute([$post]);
-        $this->insertPost('other', [$agents]);
 
-        $posts = $this->posts->byMainCategory();
-
-        self::assertSame([$tools, $agents], array_keys($posts));
-        self::assertSame(['post'], array_column($posts[$tools], 'slug'));
-        self::assertSame(['other'], array_column($posts[$agents], 'slug'));
+        self::assertSame('money', $this->posts->inCategory($tools, Sort::Date, 9, 0)[0]->mainCategorySlug);
     }
 
     public function testLatestPostsAcrossCategories(): void
