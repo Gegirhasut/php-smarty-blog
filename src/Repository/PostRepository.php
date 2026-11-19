@@ -13,6 +13,10 @@ use App\Database\Row;
 use DateTimeImmutable;
 use PDO;
 
+/**
+ * Статьи категории, главная и похожие выбирают id по индексам связки category_post, где есть копии даты
+ * и просмотров статьи, и только потом читают строки posts - для выбранных статей.
+ */
 final class PostRepository
 {
     // Колонки для PostCard: в списках текст статьи не нужен. Основная категория - для заглушки вместо обложки:
@@ -35,22 +39,22 @@ final class PostRepository
      */
     public function latestByCategory(int $perCategory): array
     {
-        // LATERAL берёт у каждой категории только id последних статей, пустые категории отсекает JOIN; колонки
-        // карточки и подзапрос основной категории - снаружи, только для выбранных. STRAIGHT_JOIN: статьи идут
-        // по индексу даты, связь проверяется по PK, и LIMIT обрывает проход. Сам MySQL начинает со связей
-        // и сортирует все статьи категории - на 100 000 статей это 13 с вместо миллисекунд
+        // LATERAL берёт у каждой категории id последних статей обратным проходом по индексу (category_id,
+        // published_at, post_id): LIMIT читает ровно столько записей, сколько нужно, у пустой категории - ни одной,
+        // и её отсекает JOIN. Колонки карточки и подзапрос основной категории - снаружи, только для выбранных статей.
+        // category_id в ORDER BY внутри одной категории ничего не меняет, но без него MySQL не видит, что индекс
+        // уже упорядочен: категорию из внешней таблицы он не считает постоянной и сортирует все её статьи
         $statement = $this->pdo->prepare(
             'SELECT c.id AS category_id, c.slug AS category_slug, c.name AS category_name,
                     c.description AS category_description, ' . self::CARD_COLUMNS . '
              FROM categories c
              JOIN LATERAL (
-                 SELECT recent.id FROM posts recent
-                 STRAIGHT_JOIN category_post cp ON cp.post_id = recent.id
+                 SELECT cp.post_id FROM category_post cp
                  WHERE cp.category_id = c.id
-                 ORDER BY recent.published_at DESC, recent.id DESC
+                 ORDER BY cp.category_id DESC, cp.published_at DESC, cp.post_id DESC
                  LIMIT ?
              ) latest ON TRUE
-             JOIN posts p ON p.id = latest.id
+             JOIN posts p ON p.id = latest.post_id
              ORDER BY c.id, p.published_at DESC, p.id DESC',
         );
         $statement->execute([$perCategory]);
@@ -89,18 +93,23 @@ final class PostRepository
      */
     public function inCategory(int $categoryId, Sort $sort, int $limit, int $offset): array
     {
-        // ORDER BY не принимает параметры запроса, поэтому сортировка выбирается из готовых строк
-        $order = match ($sort) {
-            Sort::Date => 'p.published_at DESC, p.id DESC',
-            Sort::Views => 'p.views DESC, p.id DESC',
+        // ORDER BY не принимает параметры запроса, поэтому колонка выбирается из готовых строк
+        $column = match ($sort) {
+            Sort::Date => 'published_at',
+            Sort::Views => 'views',
         };
 
+        // Отложенное соединение: id страницы выбираются по покрывающему индексу связки, OFFSET пропускает только
+        // его записи, а строки статей читаются для выбранных. Порядок снаружи - по той же копии из связки
         $statement = $this->pdo->prepare(
-            'SELECT ' . self::CARD_COLUMNS . " FROM posts p
-             JOIN category_post cp ON cp.post_id = p.id
-             WHERE cp.category_id = ?
-             ORDER BY {$order}
-             LIMIT ? OFFSET ?",
+            'SELECT ' . self::CARD_COLUMNS . " FROM (
+                 SELECT cp.post_id, cp.{$column} AS sort_value FROM category_post cp
+                 WHERE cp.category_id = ?
+                 ORDER BY cp.{$column} DESC, cp.post_id DESC
+                 LIMIT ? OFFSET ?
+             ) page
+             JOIN posts p ON p.id = page.post_id
+             ORDER BY page.sort_value DESC, page.post_id DESC",
         );
         $statement->execute([$categoryId, $limit, $offset]);
 
@@ -124,11 +133,19 @@ final class PostRepository
     }
 
     /**
-     * Счётчик увеличивает сама база, поэтому одновременные просмотры не теряются.
+     * Счётчик увеличивает сама база, поэтому одновременные просмотры не теряются. Статья и копии её просмотров
+     * в связке меняются одним UPDATE: он атомарен, как любой запрос InnoDB, и не расходится с posts, а отдельная
+     * транзакция из двух запросов была бы длиннее и не открылась бы внутри уже начатой.
      */
     public function incrementViews(int $postId): void
     {
-        $this->pdo->prepare('UPDATE posts SET views = views + 1 WHERE id = ?')->execute([$postId]);
+        // UPDATE по нескольким таблицам меняет каждую строку один раз, сколько бы раз она ни встретилась в JOIN:
+        // статья из трёх категорий получает +1, а не +3. LEFT JOIN - чтобы просмотр засчитался и статье без категорий
+        $this->pdo->prepare(
+            'UPDATE posts p LEFT JOIN category_post cp ON cp.post_id = p.id
+             SET p.views = p.views + 1, cp.views = cp.views + 1
+             WHERE p.id = ?',
+        )->execute([$postId]);
     }
 
     /**
@@ -266,7 +283,10 @@ final class PostRepository
     }
 
     /**
-     * @param list<array{int, int, int}> $links тройки [id статьи, id категории, место категории у статьи]
+     * Связи статей с категориями. Дата и просмотры - копии полей статьи: по ним сортируются ленты категорий.
+     *
+     * @param list<array{post_id: int, category_id: int, position: int, published_at: string, views: int}> $links
+     *     position - место категории у статьи, 0 - основная
      */
     public function attachCategories(array $links): void
     {
@@ -274,9 +294,15 @@ final class PostRepository
             return;
         }
 
-        $rows = implode(', ', array_fill(0, count($links), '(?, ?, ?)'));
-        $this->pdo->prepare("INSERT INTO category_post (post_id, category_id, position) VALUES {$rows}")
-            ->execute(array_merge(...$links));
+        $params = [];
+        foreach ($links as $link) {
+            array_push($params, $link['post_id'], $link['category_id'], $link['position'], $link['published_at'], $link['views']);
+        }
+
+        $rows = implode(', ', array_fill(0, count($links), '(?, ?, ?, ?, ?)'));
+        $this->pdo->prepare(
+            "INSERT INTO category_post (post_id, category_id, position, published_at, views) VALUES {$rows}",
+        )->execute($params);
     }
 
     /**
@@ -284,19 +310,19 @@ final class PostRepository
      */
     private function byCommonCategories(int $postId, int $limit): array
     {
-        // own - категории статьи, other - последние статьи каждой из них, кроме самой статьи (STRAIGHT_JOIN -
-        // как на главной); COUNT(*) в группе - число общих категорий среди этих кандидатов.
+        // own - категории статьи, other - последние статьи каждой из них, кроме самой статьи, тем же обратным
+        // проходом по индексу связки, что на главной (и с category_id в ORDER BY по той же причине); COUNT(*)
+        // в группе - число общих категорий среди этих кандидатов.
         // Остальные поля p можно выбирать при GROUP BY p.id: они зависят от первичного ключа
         $statement = $this->pdo->prepare(
             'SELECT ' . self::CARD_COLUMNS . ' FROM category_post own
              JOIN LATERAL (
-                 SELECT candidate.id FROM posts candidate
-                 STRAIGHT_JOIN category_post cp ON cp.post_id = candidate.id
-                 WHERE cp.category_id = own.category_id AND candidate.id <> own.post_id
-                 ORDER BY candidate.published_at DESC, candidate.id DESC
+                 SELECT cp.post_id FROM category_post cp
+                 WHERE cp.category_id = own.category_id AND cp.post_id <> own.post_id
+                 ORDER BY cp.category_id DESC, cp.published_at DESC, cp.post_id DESC
                  LIMIT ' . self::SIMILAR_CANDIDATES . '
              ) other ON TRUE
-             JOIN posts p ON p.id = other.id
+             JOIN posts p ON p.id = other.post_id
              WHERE own.post_id = ?
              GROUP BY p.id
              ORDER BY COUNT(*) DESC, p.published_at DESC, p.id DESC

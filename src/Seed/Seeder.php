@@ -28,7 +28,8 @@ final class Seeder
     private const CATEGORY_KEYS = ['slug', 'name', 'description'];
     // Обложка (image) необязательна
     private const POST_KEYS = ['title', 'description', 'categories', 'published_at', 'views', 'content'];
-    // 1000 статей - около 3 МБ запроса и 7000 параметров: далеко от max_allowed_packet и предела в 65 535
+    // 1000 статей - около 3 МБ запроса и 7000 параметров, их связи - до 15 000 параметров: далеко
+    // от max_allowed_packet и предела в 65 535
     private const BATCH = 1000;
 
     public function __construct(
@@ -249,7 +250,7 @@ final class Seeder
     /**
      * @param list<SeedPost> $posts
      * @param array<string, int> $categoryIds
-     * @return list<array{int, int, int}>
+     * @return list<array{post_id: int, category_id: int, position: int, published_at: string, views: int}>
      */
     private function links(array $posts, array $categoryIds): array
     {
@@ -257,11 +258,16 @@ final class Seeder
 
         $links = [];
         foreach ($posts as $post) {
-            // Первая категория в списке статьи - основная
+            // Первая категория в списке статьи - основная; дата и просмотры - те же, что у самой статьи
             foreach ($post['categories'] as $position => $slug) {
-                $categoryId = $categoryIds[$slug]
-                    ?? throw new RuntimeException("У статьи {$post['slug']} неизвестная категория {$slug}");
-                $links[] = [$postIds[$post['slug']], $categoryId, $position];
+                $links[] = [
+                    'post_id' => $postIds[$post['slug']],
+                    'category_id' => $categoryIds[$slug]
+                        ?? throw new RuntimeException("У статьи {$post['slug']} неизвестная категория {$slug}"),
+                    'position' => $position,
+                    'published_at' => $post['published_at'],
+                    'views' => $post['views'],
+                ];
             }
         }
 

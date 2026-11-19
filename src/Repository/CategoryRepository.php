@@ -95,17 +95,18 @@ final class CategoryRepository
 
     /**
      * Дата самой свежей статьи каждой категории, в которой есть статьи.
-     * slug можно выбирать при GROUP BY c.id: он зависит от первичного ключа.
      *
      * @return array<string, DateTimeImmutable> slug категории => дата
      */
     public function lastPostDates(): array
     {
+        // MAX по копии даты в связке: индекс (category_id, published_at, post_id) отвечает одной записью
+        // на категорию, без прохода по статьям
         $statement = $this->pdo->prepare(
-            'SELECT c.slug, MAX(p.published_at) AS published_at FROM categories c
-             JOIN category_post cp ON cp.category_id = c.id
-             JOIN posts p ON p.id = cp.post_id
-             GROUP BY c.id
+            'SELECT c.slug, latest.published_at FROM (
+                 SELECT category_id, MAX(published_at) AS published_at FROM category_post GROUP BY category_id
+             ) latest
+             JOIN categories c ON c.id = latest.category_id
              ORDER BY c.id',
         );
         $statement->execute();

@@ -162,6 +162,51 @@ final class PostRepositoryTest extends DatabaseTestCase
         );
     }
 
+    public function testViewsInCategoryLinksMatchPost(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $agents = $this->insertCategory('agents');
+        $money = $this->insertCategory('money');
+        $post = $this->insertPost('post', [$tools, $agents, $money], views: 10);
+        $other = $this->insertPost('other', [$tools], views: 10);
+
+        $this->posts->incrementViews($post);
+        $this->posts->incrementViews($post);
+
+        // Статья в трёх категориях: и сама она, и каждая её связь получают +1 за просмотр, а не +3
+        self::assertSame(12, $this->select("SELECT views FROM posts WHERE slug = 'post'")->fetchColumn());
+        self::assertSame(
+            [$tools => 12, $agents => 12, $money => 12],
+            $this->select("SELECT category_id, views FROM category_post WHERE post_id = {$post} ORDER BY category_id")
+                ->fetchAll(PDO::FETCH_KEY_PAIR),
+        );
+        self::assertSame(10, $this->select("SELECT views FROM category_post WHERE post_id = {$other}")->fetchColumn());
+    }
+
+    public function testCountsViewsOfPostWithoutCategories(): void
+    {
+        $post = $this->insertPost('alone', [], views: 3);
+
+        $this->posts->incrementViews($post);
+
+        self::assertSame(4, $this->select("SELECT views FROM posts WHERE id = {$post}")->fetchColumn());
+    }
+
+    public function testCategorySortedByViewsFollowsNewViews(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $this->insertPost('popular', [$tools], views: 2);
+        $rising = $this->insertPost('rising', [$tools], views: 1);
+
+        $this->posts->incrementViews($rising);
+        $this->posts->incrementViews($rising);
+
+        $cards = $this->posts->inCategory($tools, Sort::Views, 10, 0);
+
+        self::assertSame(['rising', 'popular'], array_column($cards, 'slug'));
+        self::assertSame([3, 2], array_column($cards, 'views'));
+    }
+
     public function testSimilarPostsShareMostCategoriesThenAreNewer(): void
     {
         $tools = $this->insertCategory('tools');
@@ -241,6 +286,22 @@ final class PostRepositoryTest extends DatabaseTestCase
         $this->pdo->prepare('DELETE FROM category_post WHERE post_id = ? AND position = 0')->execute([$post]);
 
         self::assertSame('money', $this->posts->inCategory($tools, Sort::Date, 9, 0)[0]->mainCategorySlug);
+    }
+
+    public function testLatestByCategoryFindsOldPostsOfSmallCategory(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $rare = $this->insertCategory('rare');
+        $this->insertPost('rare-old', [$rare, $tools], '2026-01-01 10:00:00');
+        for ($day = 1; $day <= 9; $day++) {
+            $this->insertPost("tool-{$day}", [$tools], "2026-10-0{$day} 10:00:00");
+        }
+
+        $sections = $this->posts->latestByCategory(3);
+
+        self::assertSame(['tool-9', 'tool-8', 'tool-7'], array_column($sections[0]['posts'], 'slug'));
+        // У маленькой категории её статья найдена, хотя в общей ленте она старше всех
+        self::assertSame(['rare-old'], array_column($sections[1]['posts'], 'slug'));
     }
 
     public function testLatestPostsAcrossCategories(): void

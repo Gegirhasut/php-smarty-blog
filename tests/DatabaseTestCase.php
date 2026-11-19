@@ -125,10 +125,11 @@ abstract class DatabaseTestCase extends TestCase
         ]);
         $postId = (int) $this->pdo->lastInsertId();
 
-        // Первая категория в списке - основная, как в сидере
+        // Первая категория в списке - основная; дата и просмотры в связке - копии полей статьи, как у сидера
         foreach ($categoryIds as $position => $categoryId) {
-            $this->pdo->prepare('INSERT INTO category_post (category_id, post_id, position) VALUES (?, ?, ?)')
-                ->execute([$categoryId, $postId, $position]);
+            $this->pdo->prepare(
+                'INSERT INTO category_post (category_id, post_id, position, published_at, views) VALUES (?, ?, ?, ?, ?)',
+            )->execute([$categoryId, $postId, $position, $publishedAt, $views]);
         }
 
         return $postId;

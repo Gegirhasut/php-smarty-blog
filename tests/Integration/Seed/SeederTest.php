@@ -79,6 +79,18 @@ final class SeederTest extends DatabaseTestCase
         ], $post);
     }
 
+    public function testLinksCopyDateAndViewsOfPost(): void
+    {
+        // Демо-статьи и сгенерированные: ленты категорий сортируются по этим копиям
+        $this->seeder(self::FIXTURES)->run(20);
+
+        self::assertGreaterThan(23, $this->select('SELECT COUNT(*) FROM category_post')->fetchColumn());
+        self::assertSame(0, $this->select(
+            'SELECT COUNT(*) FROM category_post cp JOIN posts p ON p.id = cp.post_id
+             WHERE cp.published_at <> p.published_at OR cp.views <> p.views',
+        )->fetchColumn());
+    }
+
     public function testCopiesUsedCoversToUploads(): void
     {
         $this->seeder(self::FIXTURES)->run();

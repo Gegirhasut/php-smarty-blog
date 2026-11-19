@@ -24,11 +24,10 @@ CREATE TABLE IF NOT EXISTS posts (
     published_at DATETIME NOT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY posts_slug_unique (slug),
-    -- Ленты «сначала новые» и «сначала популярные» сортируются с id в конце ORDER BY, это и делает порядок стабильным.
-    -- InnoDB неявно дописывает первичный ключ в конец вторичного индекса, поэтому ORDER BY published_at DESC, id DESC
-    -- (и так же по views) обслуживается индексом без filesort и без отдельного составного индекса
+    -- Свежие статьи всего блога (RSS, добор похожих). id в конце ORDER BY делает порядок стабильным, а InnoDB
+    -- неявно дописывает первичный ключ в конец вторичного индекса, поэтому ORDER BY published_at DESC, id DESC
+    -- обслуживается этим индексом без filesort
     KEY posts_published_at_index (published_at),
-    KEY posts_views_index (views),
     -- Узкий покрывающий индекс для sitemap: файл sitemap - диапазон id, а проход по первичному ключу читал бы
     -- строки целиком, вместе с текстом статьи
     KEY posts_sitemap_index (id, published_at, slug)
@@ -38,12 +37,20 @@ CREATE TABLE IF NOT EXISTS category_post (
     category_id INT UNSIGNED NOT NULL,
     post_id INT UNSIGNED NOT NULL,
     -- Порядок категорий статьи, как в её файле сидера. Первая по порядку - основная: она в хлебных крошках,
-    -- первой среди меток и в llms.txt
+    -- первой среди меток и выбирает заглушку для статьи без обложки
     position TINYINT UNSIGNED NOT NULL,
-    -- Первичный ключ отвечает на «статьи категории», второй индекс - на «категории статьи» по порядку
-    -- (метки, похожие статьи) и нужен внешнему ключу на posts. UNIQUE не даёт статье двух основных категорий
+    -- Копии posts.published_at и posts.views: по ним индексы ниже отдают статьи категории по порядку, не читая posts
+    -- и не проходя статьи других категорий. Пишутся вместе со связью, просмотры увеличивает тот же UPDATE, что и в posts
+    published_at DATETIME NOT NULL,
+    views INT UNSIGNED NOT NULL,
+    -- Первичный ключ не даёт связать статью с категорией дважды. UNIQUE отвечает на «категории статьи» по порядку
+    -- (метки, похожие статьи), нужен внешнему ключу на posts и не даёт статье двух основных категорий
     PRIMARY KEY (category_id, post_id),
     UNIQUE KEY category_post_post_position_unique (post_id, position),
+    -- Лента категории «сначала новые» и «сначала популярные», post_id в конце - для стабильного порядка.
+    -- Индексы покрывающие: страница категории, главная и похожие берут из них id статей и читают posts только для них
+    KEY category_post_category_published_index (category_id, published_at, post_id),
+    KEY category_post_category_views_index (category_id, views, post_id),
     CONSTRAINT category_post_category_fk FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE,
     CONSTRAINT category_post_post_fk FOREIGN KEY (post_id) REFERENCES posts (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
