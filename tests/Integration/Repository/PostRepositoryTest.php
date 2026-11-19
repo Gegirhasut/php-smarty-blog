@@ -254,16 +254,44 @@ final class PostRepositoryTest extends DatabaseTestCase
         self::assertSame(['new', 'middle'], array_column($this->posts->latest(2), 'slug'));
     }
 
-    public function testPublishedDatesOfAllPostsNewestFirst(): void
+    public function testNoNewestPublishedAtWithoutPosts(): void
+    {
+        self::assertNull($this->posts->newestPublishedAt());
+    }
+
+    public function testNewestPublishedAt(): void
     {
         $tools = $this->insertCategory('tools');
-        $this->insertPost('old', [$tools], '2026-09-01 10:00:00');
         $this->insertPost('new', [$tools], '2026-10-05 10:00:00');
+        $this->insertPost('old', [$tools], '2026-09-01 10:00:00');
 
+        self::assertSame('2026-10-05T10:00:00+00:00', $this->posts->newestPublishedAt()?->format(DATE_ATOM));
+    }
+
+    public function testLastId(): void
+    {
+        self::assertSame(0, $this->posts->lastId());
+
+        $tools = $this->insertCategory('tools');
+        $this->insertPost('first', [$tools], '2026-10-05 10:00:00');
+        $last = $this->insertPost('last', [$tools], '2026-09-01 10:00:00');
+
+        self::assertSame($last, $this->posts->lastId());
+    }
+
+    public function testPublishedDatesBetweenIds(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $first = $this->insertPost('first', [$tools], '2026-10-05 10:00:00');
+        $second = $this->insertPost('second', [$tools], '2026-09-01 10:00:00');
+        $this->insertPost('third', [$tools], '2026-10-07 10:00:00');
+
+        // По возрастанию id, а не по дате; третья вне диапазона
         self::assertSame(
-            ['new' => '2026-10-05T10:00:00+00:00', 'old' => '2026-09-01T10:00:00+00:00'],
-            array_map(fn (DateTimeImmutable $date): string => $date->format(DATE_ATOM), $this->posts->publishedDates()),
+            ['first' => '2026-10-05T10:00:00+00:00', 'second' => '2026-09-01T10:00:00+00:00'],
+            array_map(fn (DateTimeImmutable $date): string => $date->format(DATE_ATOM), $this->posts->publishedDatesBetweenIds($first, $second)),
         );
+        self::assertSame([], $this->posts->publishedDatesBetweenIds($first + 100, $first + 200));
     }
 
     public function testSimilarPostsAreFewerOnlyInTinyBlog(): void

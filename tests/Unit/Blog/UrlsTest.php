@@ -24,6 +24,8 @@ final class UrlsTest extends TestCase
         self::assertSame('/post/first', $this->urls->post('first'));
         self::assertSame('/feed.xml', $this->urls->feed());
         self::assertSame('/sitemap.xml', $this->urls->sitemap());
+        self::assertSame('/sitemap-categories.xml', $this->urls->sitemapCategories());
+        self::assertSame('/sitemap-posts-2.xml', $this->urls->sitemapPosts(2));
     }
 
     public function testCategoryAddressSkipsDefaults(): void

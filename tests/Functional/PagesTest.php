@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Core\Response;
+use App\Seo\Sitemap;
 use App\Tests\DatabaseTestCase;
 use App\Tests\Html;
 use App\Tests\TempDir;
@@ -271,21 +272,34 @@ final class PagesTest extends DatabaseTestCase
         $tools = $this->insertCategory('tools');
         $this->insertCategory('empty');
         $this->insertPost('old', [$tools], '2026-09-01 10:00:00');
-        $this->insertPost('new', [$tools], '2026-10-05 10:00:00');
+        $new = $this->insertPost('new', [$tools], '2026-10-05 10:00:00');
+        // Файл статей - диапазон id: id в тестовой базе не обязательно начинаются с единицы
+        $file = intdiv($new - 1, Sitemap::POSTS_PER_FILE) + 1;
 
-        $response = $this->site->get('/sitemap.xml');
+        self::assertSame(
+            ['http://blog.test/sitemap-categories.xml', "http://blog.test/sitemap-posts-{$file}.xml"],
+            $this->sitemapLocs('/sitemap.xml', 'sitemapindex'),
+        );
+        self::assertSame(
+            ['http://blog.test/', 'http://blog.test/category/tools'],
+            $this->sitemapLocs('/sitemap-categories.xml', 'urlset'),
+        );
+        // По возрастанию id: старые статьи остаются в начале своего файла
+        self::assertSame(
+            ['http://blog.test/post/old', 'http://blog.test/post/new'],
+            $this->sitemapLocs("/sitemap-posts-{$file}.xml", 'urlset'),
+        );
+    }
 
-        self::assertSame(200, $response->status);
-        self::assertSame('application/xml; charset=utf-8', $response->headers['Content-Type']);
-        $document = new DOMDocument();
-        self::assertTrue($document->loadXML($response->body));
-        $locs = array_map(fn (DOMNode $node): string => $node->textContent, iterator_to_array($document->getElementsByTagName('loc')));
-        self::assertSame([
-            'http://blog.test/',
-            'http://blog.test/category/tools',
-            'http://blog.test/post/new',
-            'http://blog.test/post/old',
-        ], $locs);
+    public function testSitemapPostFilesOutsideRangeAreMissing(): void
+    {
+        $post = $this->insertPost('post', [$this->insertCategory('tools')]);
+        $file = intdiv($post - 1, Sitemap::POSTS_PER_FILE) + 1;
+
+        self::assertSame(200, $this->site->get("/sitemap-posts-{$file}.xml")->status);
+        foreach (['0', '0' . $file, (string) ($file + 1), 'abc', '1e3'] as $number) {
+            self::assertSame(404, $this->site->get("/sitemap-posts-{$number}.xml")->status, $number);
+        }
     }
 
     public function testFeed(): void
@@ -426,5 +440,21 @@ final class PagesTest extends DatabaseTestCase
         self::assertSame(200, $response->status);
 
         return new Html($response->body);
+    }
+
+    /**
+     * @return list<string> адреса из файла sitemap или его индекса
+     */
+    private function sitemapLocs(string $url, string $root): array
+    {
+        $response = $this->site->get($url);
+        self::assertSame(200, $response->status);
+        self::assertSame('application/xml; charset=utf-8', $response->headers['Content-Type']);
+
+        $document = new DOMDocument();
+        self::assertTrue($document->loadXML($response->body));
+        self::assertSame($root, $document->documentElement?->localName);
+
+        return array_map(fn (DOMNode $node): string => $node->textContent, iterator_to_array($document->getElementsByTagName('loc'), false));
     }
 }

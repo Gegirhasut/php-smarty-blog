@@ -166,15 +166,37 @@ final class PostRepository
     }
 
     /**
-     * Даты публикации всех статей, от новых к старым. В один файл sitemap помещается 50 000 адресов:
-     * блогу до этого далеко, а больше понадобился бы индекс из нескольких файлов.
+     * Дата самой свежей статьи блога; null - статей нет.
+     */
+    public function newestPublishedAt(): ?DateTimeImmutable
+    {
+        $statement = $this->pdo->prepare('SELECT published_at FROM posts ORDER BY published_at DESC LIMIT 1');
+        $statement->execute();
+
+        return Row::first($statement)?->date('published_at');
+    }
+
+    /**
+     * Наибольший id статьи, 0 - статей нет: по нему считаются файлы sitemap.
+     */
+    public function lastId(): int
+    {
+        $statement = $this->pdo->prepare('SELECT id FROM posts ORDER BY id DESC LIMIT 1');
+        $statement->execute();
+
+        return Row::first($statement)?->int('id') ?? 0;
+    }
+
+    /**
+     * Даты публикации статей с id от $firstId до $lastId, по возрастанию id - для файла sitemap. Диапазон идёт
+     * по покрывающему индексу posts_sitemap_index, строки статей с текстом не читаются.
      *
      * @return array<string, DateTimeImmutable> slug статьи => дата
      */
-    public function publishedDates(): array
+    public function publishedDatesBetweenIds(int $firstId, int $lastId): array
     {
-        $statement = $this->pdo->prepare('SELECT slug, published_at FROM posts ORDER BY published_at DESC, id DESC');
-        $statement->execute();
+        $statement = $this->pdo->prepare('SELECT slug, published_at FROM posts WHERE id BETWEEN ? AND ? ORDER BY id');
+        $statement->execute([$firstId, $lastId]);
 
         $dates = [];
         foreach (Row::all($statement) as $row) {

@@ -28,7 +28,10 @@ CREATE TABLE IF NOT EXISTS posts (
     -- InnoDB неявно дописывает первичный ключ в конец вторичного индекса, поэтому ORDER BY published_at DESC, id DESC
     -- (и так же по views) обслуживается индексом без filesort и без отдельного составного индекса
     KEY posts_published_at_index (published_at),
-    KEY posts_views_index (views)
+    KEY posts_views_index (views),
+    -- Узкий покрывающий индекс для sitemap: файл sitemap - диапазон id, а проход по первичному ключу читал бы
+    -- строки целиком, вместе с текстом статьи
+    KEY posts_sitemap_index (id, published_at, slug)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 CREATE TABLE IF NOT EXISTS category_post (

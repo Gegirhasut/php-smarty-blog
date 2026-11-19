@@ -110,11 +110,12 @@ final class App
             $this->categories(),
             $this->posts(),
         ))->show($request, $params['slug']));
-        $router->add('/sitemap.xml', fn (): Response => (new SitemapController(
-            new Sitemap($this->urls),
-            $this->categories(),
-            $this->posts(),
-        ))->index());
+        $router->add('/sitemap.xml', fn (): Response => $this->sitemap()->index());
+        $router->add('/sitemap-categories.xml', fn (): Response => $this->sitemap()->categories());
+        $router->add(
+            '/sitemap-posts-{number}.xml',
+            fn (Request $request, array $params): Response => $this->sitemap()->posts($params['number']),
+        );
         $router->add('/feed.xml', fn (): Response => (new FeedController(
             new RssFeed($this->config, $this->urls),
             $this->categories(),
@@ -127,6 +128,11 @@ final class App
         $router->add('/robots.txt', fn (): Response => (new RobotsController($this->urls))->index());
 
         return $router;
+    }
+
+    private function sitemap(): SitemapController
+    {
+        return new SitemapController(new Sitemap($this->urls), $this->categories(), $this->posts());
     }
 
     private function categories(): CategoryRepository

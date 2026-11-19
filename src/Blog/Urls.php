@@ -36,9 +36,22 @@ final class Urls
         return '/feed.xml';
     }
 
+    /**
+     * Индекс sitemap: ссылки на файлы с адресами, его указывает robots.txt.
+     */
     public function sitemap(): string
     {
         return '/sitemap.xml';
+    }
+
+    public function sitemapCategories(): string
+    {
+        return '/sitemap-categories.xml';
+    }
+
+    public function sitemapPosts(int $number): string
+    {
+        return "/sitemap-posts-{$number}.xml";
     }
 
     public function absolute(string $path): string
