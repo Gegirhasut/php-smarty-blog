@@ -17,6 +17,11 @@ set_error_handler(function (int $level, string $message, string $file, int $line
     throw new ErrorException($message, 0, $level, $file, $line);
 });
 
+// Фатальную ошибку PHP (нехватка памяти, исключение вне App) с display_errors = On, как в php.ini разработки,
+// показал бы в теле ответа с кодом 200. Без вывода PHP отвечает 500, а ошибка остаётся в логе. Исключения
+// внутри App и так видны: в разработке страница 500 показывает их текст
+ini_set('display_errors', '0');
+
 // Время в базе (published_at) - UTC; в нём же даты выводятся на страницах, в RSS, sitemap и JSON-LD
 date_default_timezone_set('UTC');
 
