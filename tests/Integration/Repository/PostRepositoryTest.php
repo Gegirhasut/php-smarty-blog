@@ -10,6 +10,7 @@ use App\Blog\PostCard;
 use App\Blog\Sort;
 use App\Repository\PostRepository;
 use App\Tests\DatabaseTestCase;
+use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
 use PDO;
@@ -207,43 +208,77 @@ final class PostRepositoryTest extends DatabaseTestCase
         self::assertSame([3, 2], array_column($cards, 'views'));
     }
 
-    public function testSimilarPostsShareMostCategoriesThenAreNewer(): void
+    public function testSimilarPostsShareMostCategoriesThenAreClosestInTime(): void
     {
         $tools = $this->insertCategory('tools');
         $agents = $this->insertCategory('agents');
         $money = $this->insertCategory('money');
         $post = $this->insertPost('post', [$tools, $agents], '2026-10-01 10:00:00');
         $this->insertPost('both-old', [$tools, $agents], '2026-09-01 10:00:00');
-        $this->insertPost('one-new', [$agents, $money], '2026-10-05 10:00:00');
+        $this->insertPost('one-next-day', [$agents, $money], '2026-10-02 10:00:00');
         $this->insertPost('one-tie-first', [$tools], '2026-10-03 10:00:00');
         $this->insertPost('one-tie-second', [$tools], '2026-10-03 10:00:00');
+        // Так же далеко от статьи, как пара выше, но раньше неё: из равных по расстоянию первой идёт более новая
+        $this->insertPost('one-before', [$tools], '2026-09-29 10:00:00');
         $this->insertPost('unrelated', [$money], '2026-10-10 10:00:00');
 
         self::assertSame(
-            ['both-old', 'one-new', 'one-tie-second'],
+            ['both-old', 'one-next-day', 'one-tie-second'],
             array_column($this->posts->similar($post, 3), 'slug'),
         );
         // Статья без общих категорий - только добором, после всех соседей по категориям
         self::assertSame(
-            ['both-old', 'one-new', 'one-tie-second', 'one-tie-first', 'unrelated'],
+            ['both-old', 'one-next-day', 'one-tie-second', 'one-tie-first', 'one-before', 'unrelated'],
             array_column($this->posts->similar($post, 10), 'slug'),
         );
     }
 
-    public function testSimilarPostsAreChosenAmongLatestPostsOfEachCategory(): void
+    public function testSimilarPostsAreChosenAmongNearestPostsOfEachCategory(): void
     {
         $tools = $this->insertCategory('tools');
         $agents = $this->insertCategory('agents');
         $post = $this->insertPost('post', [$tools, $agents], '2026-10-01 10:00:00');
-        // Две общие категории, но в tools старше пятидесяти других статей: там он не кандидат, общая остаётся одна
+        // Две общие категории, но в tools между ним и статьёй 25 других: там он не кандидат, общая остаётся одна
         $this->insertPost('both-oldest', [$tools, $agents], '2026-01-01 10:00:00');
-        for ($i = 1; $i <= 50; $i++) {
+        for ($i = 1; $i <= 25; $i++) {
             $this->insertPost("tool-{$i}", [$tools], '2026-02-01 10:00:00');
         }
 
         self::assertSame(
-            ['tool-50', 'tool-49', 'tool-48'],
+            ['tool-25', 'tool-24', 'tool-23'],
             array_column($this->posts->similar($post, 3), 'slug'),
+        );
+    }
+
+    public function testSimilarPostsOfBigCategoryDependOnPost(): void
+    {
+        $tools = $this->insertCategory('tools');
+        // Больше 50 статей в одной категории: последние 50 у всех статей были бы одни и те же
+        $start = new DateTimeImmutable('2026-10-01 00:00:00');
+        $ids = [];
+        for ($hour = 1; $hour <= 60; $hour++) {
+            $publishedAt = $start->add(new DateInterval("PT{$hour}H"))->format('Y-m-d H:i:s');
+            $ids[$hour] = $this->insertPost("tool-{$hour}", [$tools], $publishedAt);
+        }
+
+        // Ближайшие по дате с обеих сторон, из равных по расстоянию - более новая
+        self::assertSame(['tool-11', 'tool-9', 'tool-12'], array_column($this->posts->similar($ids[10], 3), 'slug'));
+        self::assertSame(['tool-51', 'tool-49', 'tool-52'], array_column($this->posts->similar($ids[50], 3), 'slug'));
+        self::assertSame(['tool-59', 'tool-58', 'tool-57'], array_column($this->posts->similar($ids[60], 3), 'slug'));
+    }
+
+    public function testSimilarPostsIncludeNeighboursPublishedAtSameTime(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $this->insertPost('same-time-before', [$tools], '2026-10-01 10:00:00');
+        $post = $this->insertPost('post', [$tools], '2026-10-01 10:00:00');
+        $this->insertPost('same-time-after', [$tools], '2026-10-01 10:00:00');
+        // Новее всех, но без общей категории: попала бы в блок, только если соседи с той же датой потерялись
+        $this->insertPost('unrelated', [$this->insertCategory('money')], '2026-10-05 10:00:00');
+
+        self::assertSame(
+            ['same-time-after', 'same-time-before'],
+            array_column($this->posts->similar($post, 2), 'slug'),
         );
     }
 

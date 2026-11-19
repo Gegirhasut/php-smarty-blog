@@ -192,7 +192,7 @@ final class PagesTest extends DatabaseTestCase
         self::assertSame(['Раздел'], $page->texts(self::POST . '//h2'));
         self::assertSame(['первый пункт', 'второй пункт'], $page->texts(self::POST . '//li[not(ancestor::header)]'));
         self::assertSame('high', $page->attribute('//article/img', 'fetchpriority'));
-        // Похожие: больше общих категорий, затем новее
+        // Похожие: больше общих категорий, затем ближе по дате
         self::assertSame(['/post/both', '/post/newer', '/post/older'], $page->attributes('//aside//article//h3/a', 'href'));
         self::assertSame(['Инструменты', 'Агенты'], $page->texts('//aside//section[h2="Категории"]//a'));
         self::assertSame('http://blog.test/post/main', $page->attribute('//link[@rel="canonical"]', 'href'));

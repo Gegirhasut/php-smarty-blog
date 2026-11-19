@@ -14,19 +14,16 @@ use DateTimeImmutable;
 use PDO;
 
 /**
- * Статьи категории, главная и похожие выбирают id по индексам связки category_post, где есть копии даты
- * и просмотров статьи, и только потом читают строки posts - для выбранных статей.
+ * Списки выбирают id по индексам связки category_post (там копии даты и просмотров) и читают posts только для них.
  */
 final class PostRepository
 {
-    // Колонки для PostCard: в списках текст статьи не нужен. Основная категория - для заглушки вместо обложки:
-    // подзапрос на строку списка идёт по UNIQUE (post_id, position) и первичному ключу категорий
+    // Без текста статьи: в списках он не нужен. Основная категория - для заглушки вместо обложки
     private const CARD_COLUMNS = 'p.id, p.slug, p.title, p.description, p.image, p.views, p.published_at,
         (SELECT mc.slug FROM category_post mcp JOIN categories mc ON mc.id = mcp.category_id
          WHERE mcp.post_id = p.id ORDER BY mcp.position LIMIT 1) AS main_category';
-    // Похожие ищутся среди стольких последних статей каждой категории статьи: группировать всех соседей
-    // на 100 000 статей - секунды
-    private const SIMILAR_CANDIDATES = 50;
+    // Кандидаты в похожие - столько ближайших по дате статей до и после статьи в каждой её категории
+    private const SIMILAR_NEIGHBOURS = 25;
 
     public function __construct(private readonly PDO $pdo)
     {
@@ -39,11 +36,7 @@ final class PostRepository
      */
     public function latestByCategory(int $perCategory): array
     {
-        // LATERAL берёт у каждой категории id последних статей обратным проходом по индексу (category_id,
-        // published_at, post_id): LIMIT читает ровно столько записей, сколько нужно, у пустой категории - ни одной,
-        // и её отсекает JOIN. Колонки карточки и подзапрос основной категории - снаружи, только для выбранных статей.
-        // category_id в ORDER BY внутри одной категории ничего не меняет, но без него MySQL не видит, что индекс
-        // уже упорядочен: категорию из внешней таблицы он не считает постоянной и сортирует все её статьи
+        // cp.category_id в ORDER BY - иначе MySQL не видит, что индекс уже упорядочен, и сортирует всю категорию
         $statement = $this->pdo->prepare(
             'SELECT c.id AS category_id, c.slug AS category_slug, c.name AS category_name,
                     c.description AS category_description, ' . self::CARD_COLUMNS . '
@@ -86,8 +79,7 @@ final class PostRepository
     }
 
     /**
-     * Страница статей категории. При равных датах или просмотрах порядок задаёт id,
-     * иначе такие статьи могли бы переезжать между страницами от запроса к запросу.
+     * Страница категории; id в конце порядка - чтобы равные по дате или просмотрам не переезжали между страницами.
      *
      * @return list<PostCard>
      */
@@ -99,8 +91,7 @@ final class PostRepository
             Sort::Views => 'views',
         };
 
-        // Отложенное соединение: id страницы выбираются по покрывающему индексу связки, OFFSET пропускает только
-        // его записи, а строки статей читаются для выбранных. Порядок снаружи - по той же копии из связки
+        // Отложенное соединение: OFFSET пропускает записи индекса связки, а не строки статей
         $statement = $this->pdo->prepare(
             'SELECT ' . self::CARD_COLUMNS . " FROM (
                  SELECT cp.post_id, cp.{$column} AS sort_value FROM category_post cp
@@ -132,15 +123,9 @@ final class PostRepository
         return $row === null ? null : $this->post($row);
     }
 
-    /**
-     * Счётчик увеличивает сама база, поэтому одновременные просмотры не теряются. Статья и копии её просмотров
-     * в связке меняются одним UPDATE: он атомарен, как любой запрос InnoDB, и не расходится с posts, а отдельная
-     * транзакция из двух запросов была бы длиннее и не открылась бы внутри уже начатой.
-     */
     public function incrementViews(int $postId): void
     {
-        // UPDATE по нескольким таблицам меняет каждую строку один раз, сколько бы раз она ни встретилась в JOIN:
-        // статья из трёх категорий получает +1, а не +3. LEFT JOIN - чтобы просмотр засчитался и статье без категорий
+        // Один UPDATE: атомарен, строку меняет один раз при любом числе связей; LEFT JOIN - для статьи без категорий
         $this->pdo->prepare(
             'UPDATE posts p LEFT JOIN category_post cp ON cp.post_id = p.id
              SET p.views = p.views + 1, cp.views = cp.views + 1
@@ -149,8 +134,7 @@ final class PostRepository
     }
 
     /**
-     * Похожие статьи: сначала те, у кого больше общих категорий со статьёй, среди равных - новые.
-     * Меньше $limit - только если во всём блоге не хватает статей.
+     * Соседи статьи по дате из её категорий, больше общих категорий - выше; меньше $limit - только в крошечном блоге.
      *
      * @return list<PostCard>
      */
@@ -205,8 +189,7 @@ final class PostRepository
     }
 
     /**
-     * Даты публикации статей с id от $firstId до $lastId, по возрастанию id - для файла sitemap. Диапазон идёт
-     * по покрывающему индексу posts_sitemap_index, строки статей с текстом не читаются.
+     * Даты статей с id от $firstId до $lastId для файла sitemap - по покрывающему индексу, без строк с текстом.
      *
      * @return array<string, DateTimeImmutable> slug статьи => дата
      */
@@ -310,25 +293,50 @@ final class PostRepository
      */
     private function byCommonCategories(int $postId, int $limit): array
     {
-        // own - категории статьи, other - последние статьи каждой из них, кроме самой статьи, тем же обратным
-        // проходом по индексу связки, что на главной (и с category_id в ORDER BY по той же причине); COUNT(*)
-        // в группе - число общих категорий среди этих кандидатов.
-        // Остальные поля p можно выбирать при GROUP BY p.id: они зависят от первичного ключа
+        $statement = $this->pdo->prepare('SELECT category_id, published_at FROM category_post WHERE post_id = ?');
+        $statement->execute([$postId]);
+        $links = Row::all($statement);
+        if ($links === []) {
+            return [];
+        }
+
+        // Запрос на категорию и сторону: в LATERAL MySQL ищет по индексу только категорию, в UNION оценивает каждый
+        // диапазон спусками по индексу (~1 мс на ветку); FORCE INDEX - иначе он идёт от начала категории, а не от даты
+        $date = $links[0]->string('published_at');
+        $candidates = [];
+        foreach ([['<', 'DESC'], ['>', 'ASC']] as [$side, $direction]) {
+            $statement = $this->pdo->prepare(
+                "SELECT post_id, TIMESTAMPDIFF(SECOND, ?, published_at) AS shift
+                 FROM category_post FORCE INDEX (category_post_category_published_index)
+                 WHERE category_id = ? AND published_at {$side}= ? AND (published_at {$side} ? OR post_id {$side} ?)
+                 ORDER BY published_at {$direction}, post_id {$direction}
+                 LIMIT " . self::SIMILAR_NEIGHBOURS,
+            );
+            foreach ($links as $link) {
+                $statement->execute([$date, $link->int('category_id'), $date, $date, $postId]);
+                foreach (Row::all($statement) as $row) {
+                    $id = $row->int('post_id');
+                    $candidates[$id] ??= ['id' => $id, 'common' => 0, 'shift' => $row->int('shift')];
+                    $candidates[$id]['common']++;
+                }
+            }
+        }
+
+        // Больше общих категорий, затем ближе по дате, затем новее
+        usort($candidates, fn (array $a, array $b): int => [$b['common'], abs($a['shift']), $b['shift'], $b['id']]
+            <=> [$a['common'], abs($b['shift']), $a['shift'], $a['id']]);
+        $ids = array_column(array_slice($candidates, 0, $limit), 'id');
+        if ($ids === []) {
+            return [];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
         $statement = $this->pdo->prepare(
-            'SELECT ' . self::CARD_COLUMNS . ' FROM category_post own
-             JOIN LATERAL (
-                 SELECT cp.post_id FROM category_post cp
-                 WHERE cp.category_id = own.category_id AND cp.post_id <> own.post_id
-                 ORDER BY cp.category_id DESC, cp.published_at DESC, cp.post_id DESC
-                 LIMIT ' . self::SIMILAR_CANDIDATES . '
-             ) other ON TRUE
-             JOIN posts p ON p.id = other.post_id
-             WHERE own.post_id = ?
-             GROUP BY p.id
-             ORDER BY COUNT(*) DESC, p.published_at DESC, p.id DESC
-             LIMIT ?',
+            'SELECT ' . self::CARD_COLUMNS . " FROM posts p
+             WHERE p.id IN ({$placeholders})
+             ORDER BY FIELD(p.id, {$placeholders})",
         );
-        $statement->execute([$postId, $limit]);
+        $statement->execute([...$ids, ...$ids]);
 
         return array_map($this->card(...), Row::all($statement));
     }
