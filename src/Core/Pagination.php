@@ -61,18 +61,16 @@ final class Pagination
     }
 
     /**
+     * Первая, последняя и соседние с текущей, по возрастанию и без повторов. Номера берутся сразу, без прохода
+     * по всем страницам: у большой категории их тысячи.
+     *
      * @return list<int>
      */
     private function visibleNumbers(): array
     {
-        $numbers = [];
-        for ($number = 1; $number <= $this->pages; $number++) {
-            if ($number === 1 || $number === $this->pages || abs($number - $this->page) <= self::AROUND) {
-                $numbers[] = $number;
-            }
-        }
+        $around = range(max(1, $this->page - self::AROUND), min($this->pages, $this->page + self::AROUND));
 
-        return $numbers;
+        return array_values(array_unique([1, ...$around, $this->pages]));
     }
 
     /**
