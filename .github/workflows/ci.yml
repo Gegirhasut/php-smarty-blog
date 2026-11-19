@@ -89,7 +89,7 @@ jobs:
       - name: Сборка образа «всё в одном»
         run: docker build -f docker/demo/Dockerfile -t blog-demo .
 
-      # Контейнер поднимает MySQL, засевает базу и запускает сайт: главная должна ответить 200
+      # База засеяна при сборке образа, контейнер запускает MySQL с ней, php-fpm и nginx: главная должна ответить 200
       - name: Сайт отвечает
         run: |
           docker run -d --name demo -p 8080:10000 blog-demo
