@@ -22,8 +22,8 @@ final class PostRepository
     private const CARD_COLUMNS = 'p.id, p.slug, p.title, p.description, p.image, p.views, p.published_at,
         (SELECT mc.slug FROM category_post mcp JOIN categories mc ON mc.id = mcp.category_id
          WHERE mcp.post_id = p.id ORDER BY mcp.position LIMIT 1) AS main_category';
-    // Кандидаты в похожие - столько ближайших по дате статей до и после статьи в каждой её категории
-    private const SIMILAR_NEIGHBOURS = 25;
+    // Кандидаты в похожие - столько последних статей каждой категории статьи
+    private const SIMILAR_CANDIDATES = 50;
 
     public function __construct(private readonly PDO $pdo)
     {
@@ -134,7 +134,7 @@ final class PostRepository
     }
 
     /**
-     * Соседи статьи по дате из её категорий, больше общих категорий - выше; меньше $limit - только в крошечном блоге.
+     * Статьи из её категорий: больше общих - выше, затем новее; меньше $limit - только в крошечном блоге.
      *
      * @return list<PostCard>
      */
@@ -293,50 +293,27 @@ final class PostRepository
      */
     private function byCommonCategories(int $postId, int $limit): array
     {
-        $statement = $this->pdo->prepare('SELECT category_id, published_at FROM category_post WHERE post_id = ?');
-        $statement->execute([$postId]);
-        $links = Row::all($statement);
-        if ($links === []) {
-            return [];
-        }
-
-        // Запрос на категорию и сторону: в LATERAL MySQL ищет по индексу только категорию, в UNION оценивает каждый
-        // диапазон спусками по индексу (~1 мс на ветку); FORCE INDEX - иначе он идёт от начала категории, а не от даты
-        $date = $links[0]->string('published_at');
-        $candidates = [];
-        foreach ([['<', 'DESC'], ['>', 'ASC']] as [$side, $direction]) {
-            $statement = $this->pdo->prepare(
-                "SELECT post_id, TIMESTAMPDIFF(SECOND, ?, published_at) AS shift
-                 FROM category_post FORCE INDEX (category_post_category_published_index)
-                 WHERE category_id = ? AND published_at {$side}= ? AND (published_at {$side} ? OR post_id {$side} ?)
-                 ORDER BY published_at {$direction}, post_id {$direction}
-                 LIMIT " . self::SIMILAR_NEIGHBOURS,
-            );
-            foreach ($links as $link) {
-                $statement->execute([$date, $link->int('category_id'), $date, $date, $postId]);
-                foreach (Row::all($statement) as $row) {
-                    $id = $row->int('post_id');
-                    $candidates[$id] ??= ['id' => $id, 'common' => 0, 'shift' => $row->int('shift')];
-                    $candidates[$id]['common']++;
-                }
-            }
-        }
-
-        // Больше общих категорий, затем ближе по дате, затем новее
-        usort($candidates, fn (array $a, array $b): int => [$b['common'], abs($a['shift']), $b['shift'], $b['id']]
-            <=> [$a['common'], abs($b['shift']), $a['shift'], $a['id']]);
-        $ids = array_column(array_slice($candidates, 0, $limit), 'id');
-        if ($ids === []) {
-            return [];
-        }
-
-        $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+        // Последние статьи категории - обратный проход по индексу связки с LIMIT, как на главной, а не вся категория:
+        // запрос один и быстрый при любом объёме, цена - у старых статей огромной категории блок близок к её свежим
         $statement = $this->pdo->prepare(
-            'SELECT ' . self::CARD_COLUMNS . " FROM posts p
-             WHERE p.id IN ({$placeholders})
-             ORDER BY FIELD(p.id, {$placeholders})",
+            'SELECT ' . self::CARD_COLUMNS . ' FROM (
+                 SELECT other.post_id, COUNT(*) AS common, MAX(other.published_at) AS published_at
+                 FROM category_post own
+                 JOIN LATERAL (
+                     SELECT cp.post_id, cp.published_at FROM category_post cp
+                     WHERE cp.category_id = own.category_id AND cp.post_id <> own.post_id
+                     ORDER BY cp.category_id DESC, cp.published_at DESC, cp.post_id DESC
+                     LIMIT ' . self::SIMILAR_CANDIDATES . '
+                 ) other ON TRUE
+                 WHERE own.post_id = ?
+                 GROUP BY other.post_id
+                 ORDER BY common DESC, published_at DESC, other.post_id DESC
+                 LIMIT ?
+             ) chosen
+             JOIN posts p ON p.id = chosen.post_id
+             ORDER BY chosen.common DESC, chosen.published_at DESC, chosen.post_id DESC',
         );
-        $statement->execute([...$ids, ...$ids]);
+        $statement->execute([$postId, $limit]);
 
         return array_map($this->card(...), Row::all($statement));
     }
