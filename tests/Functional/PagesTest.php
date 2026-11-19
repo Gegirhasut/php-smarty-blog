@@ -378,6 +378,8 @@ final class PagesTest extends DatabaseTestCase
             'категория из одних цифр' => ['/category/2026'],
             'символ вне ascii' => ['/category/%E2%82%AC'],
             'пробел в slug' => ['/post/post%201'],
+            // Дубль /category/tools: буква закодирована без нужды
+            'закодированная буква в slug' => ['/category/too%6Cs'],
         ];
     }
 

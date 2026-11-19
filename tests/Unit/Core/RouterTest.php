@@ -65,12 +65,26 @@ final class RouterTest extends TestCase
         self::assertSame('привет', $router->dispatch(new Request('GET', '/post/%D0%BF%D1%80%D0%B8%D0%B2%D0%B5%D1%82'))->body);
     }
 
+    public function testParameterCanBePartOfSegment(): void
+    {
+        $router = new Router();
+        $router->add('/sitemap.xml', fn (): Response => new Response('index'));
+        $router->add('/sitemap-posts-{number}.xml', fn (Request $request, array $params): Response => new Response(
+            $params['number'],
+        ));
+
+        self::assertSame('index', $router->dispatch(new Request('GET', '/sitemap.xml'))->body);
+        self::assertSame('12', $router->dispatch(new Request('GET', '/sitemap-posts-12.xml'))->body);
+    }
+
     #[DataProvider('unknownPaths')]
     public function testThrowsNotFoundForUnknownPath(string $path): void
     {
         $router = new Router();
         $router->add('/', fn (): Response => new Response('home'));
         $router->add('/post/{slug}', fn (): Response => new Response('post'));
+        $router->add('/sitemap.xml', fn (): Response => new Response('sitemap'));
+        $router->add('/sitemap-posts-{number}.xml', fn (): Response => new Response('posts'));
 
         $this->expectException(NotFoundException::class);
         $router->dispatch(new Request('GET', $path));
@@ -87,6 +101,14 @@ final class RouterTest extends TestCase
             'trailing slash' => ['/post/hello/'],
             'extra segment' => ['/post/hello/comments'],
             'double slash' => ['//'],
+            // Постоянная часть не декодируется: иначе у каждой страницы были бы дубли с кодом 200
+            'encoded dot' => ['/sitemap%2Exml'],
+            'encoded letter' => ['/p%6Fst/hello'],
+            // Параметр декодируется, но закодированная без нужды буква - тоже дубль: /post/hello
+            'needlessly encoded parameter' => ['/post/hell%6F'],
+            'lowercase escape' => ['/post/%d0%bf'],
+            'empty parameter inside segment' => ['/sitemap-posts-.xml'],
+            'parameter with slash' => ['/sitemap-posts-1/2.xml'],
         ];
     }
 }

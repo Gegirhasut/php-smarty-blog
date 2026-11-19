@@ -49,6 +49,8 @@ final class AppTest extends TestCase
             'страница' => ['/missing'],
             'статика' => ['/uploads/missing.webp'],
             'точка входа' => ['/index.php'],
+            // Постоянная часть адреса сравнивается без декодирования: иначе это был бы дубль sitemap с кодом 200
+            'закодированная точка' => ['/sitemap%2Exml'],
         ];
     }
 
