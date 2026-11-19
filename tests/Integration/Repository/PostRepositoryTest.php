@@ -185,6 +185,23 @@ final class PostRepositoryTest extends DatabaseTestCase
         );
     }
 
+    public function testSimilarPostsAreChosenAmongLatestPostsOfEachCategory(): void
+    {
+        $tools = $this->insertCategory('tools');
+        $agents = $this->insertCategory('agents');
+        $post = $this->insertPost('post', [$tools, $agents], '2026-10-01 10:00:00');
+        // Две общие категории, но в tools старше пятидесяти других статей: там он не кандидат, общая остаётся одна
+        $this->insertPost('both-oldest', [$tools, $agents], '2026-01-01 10:00:00');
+        for ($i = 1; $i <= 50; $i++) {
+            $this->insertPost("tool-{$i}", [$tools], '2026-02-01 10:00:00');
+        }
+
+        self::assertSame(
+            ['tool-50', 'tool-49', 'tool-48'],
+            array_column($this->posts->similar($post, 3), 'slug'),
+        );
+    }
+
     public function testSimilarPostsAreToppedUpWithNewestOthers(): void
     {
         $tools = $this->insertCategory('tools');
