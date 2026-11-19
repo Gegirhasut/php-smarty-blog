@@ -26,8 +26,8 @@
   фикстуры - `insertCategory()` и `insertPost()` (первая категория в списке - основная). `$rollBack = true` ведёт тест
   в транзакции с откатом - так работают тесты репозиториев и страниц. Функциональные без базы (`AppTest`) проверяют,
   что соединение не открывается. Части страниц тесты ищут по смыслу разметки (`aria-label`, заголовки), а не по CSS-классам.
-- CI (`.github/workflows/ci.yml`): `composer validate --strict`, PHPStan и PHPUnit на PHP 8.1 и 8.5, отдельными задачами - сборка SCSS
-  стадией `sass` из `Dockerfile` и сборка образа демо с проверкой, что главная отвечает 200; на push в `main` и в pull request.
+- CI (`.github/workflows/ci.yml`): `composer validate --strict`, PHPStan и PHPUnit на PHP 8.1 и 8.5, отдельной задачей - сборка SCSS
+  стадией `sass` из `Dockerfile`; на push в `main` и в pull request.
 
 ## Маршруты
 - `/` - главная: категории со статьями, в каждой три последние статьи и ссылка «Все статьи».
@@ -62,13 +62,6 @@
   `components` (BEM-блоки), `pages`. `public/assets` - шрифты, картинки оформления и собранный CSS; в корне `public` -
   favicon, иконки для телефона, `site.webmanifest` и `og.jpg`.
 - `Dockerfile` (стадия `sass` - сборщик стилей, последняя - PHP для разработки) и `docker/nginx` - окружение для разработки.
-- `docker/demo` и `render.yaml` - демо на Render: один контейнер с nginx, php-fpm и MySQL 8.4 под 512 МБ. Render не выбирает
-  стадию сборки, поэтому у демо свой Dockerfile: версию dart-sass и суммы меняйте в обоих. Системные таблицы MySQL, база
-  сайта и данные создаются при сборке образа (`start.sh build`: MySQL, сидер, компиляция шаблонов); при старте (`start.sh`)
-  - MySQL с готовыми данными и новым паролем, php-fpm и nginx; упал любой - контейнер завершается. Правила nginx берутся
-  из `docker/nginx/default.conf`, меняются только порт (`$PORT`) и адрес php-fpm.
-  Проверка: `docker build -f docker/demo/Dockerfile -t blog-demo .` и `docker run --rm -m 512m -p 18080:10000
-  -e APP_URL=http://localhost:18080 blog-demo`.
 
 ## Правила кода
 - `declare(strict_types=1)`, типы везде, `final` и `readonly` где уместно.

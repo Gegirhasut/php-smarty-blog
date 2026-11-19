@@ -40,7 +40,7 @@ docker compose exec php composer test      # PHPUnit: unit, интеграцио
 docker compose exec php composer analyse   # PHPStan, уровень max
 ```
 
-CI на GitHub Actions: PHPStan и PHPUnit на PHP 8.1 и 8.5 с MySQL 8.4, сборка SCSS, сборка и запуск образа демо.
+CI на GitHub Actions: PHPStan и PHPUnit на PHP 8.1 и 8.5 с MySQL 8.4, сборка SCSS.
 
 ## Стек
 
@@ -53,7 +53,7 @@ PHP 8.5 (код совместим с 8.1), Smarty 5, MySQL 8.4, nginx, SCSS (da
 - `src/Seo` - мета-теги и JSON-LD, sitemap, RSS, llms.txt; `src/Database` и `src/Seed` - подключение, схема, сидер.
 - `templates` - шаблоны Smarty, `assets/scss` - стили, `database` - схема и данные сидера.
 - `tests` - unit, интеграционные и функциональные тесты.
-- `docker` - nginx для разработки и образ демо, `docs` - документация.
+- `docker` - nginx для разработки, `docs` - документация.
 
 ## Документация
 
